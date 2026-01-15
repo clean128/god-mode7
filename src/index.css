@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #00D9FF;
+  --color-primary-dark: #4A90E2;
+  --color-success: #00FF88;
+  --color-success-dark: #00CC6A;
+  --color-accent-orange: #FF6B35;
+  --color-accent-yellow: #FFD93D;
+  --color-accent-purple: #A855F7;
+  --color-accent-pink: #FF6B9D;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Game-style button base */
+@layer components {
+  .btn-game-primary {
+    @apply font-display text-xl font-bold uppercase;
+    @apply h-16 px-8 rounded-game;
+    @apply bg-gradient-to-br from-game-primary to-game-primary-dark;
+    @apply text-white shadow-game-blue;
+    @apply transition-all duration-200;
+    @apply hover:shadow-game-glow hover:-translate-y-0.5;
+    @apply active:scale-95;
+  }
+
+  .btn-game-secondary {
+    @apply font-body text-sm font-semibold;
+    @apply h-10 px-4 rounded-lg;
+    @apply bg-transparent text-gray-500;
+    @apply hover:bg-gray-100 transition-colors;
+  }
+}
+
+/* Mapbox overrides for game-style */
+.mapboxgl-map {
+  font-family: 'Nunito', sans-serif;
+}
+
+.mapboxgl-popup-content {
+  border-radius: 20px;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4A90E2;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00D9FF;
+}
+
