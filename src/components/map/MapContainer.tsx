@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import { useMapStore } from '../../store/mapStore'
 import { l2Api } from '../../services/l2Api'
-import { clusterPins, isCluster, type Cluster } from '../../utils/pinClustering'
+import { clusterPins, isCluster } from '../../utils/pinClustering'
 
 interface MapContainerProps {
   map: mapboxgl.Map
@@ -10,6 +10,7 @@ interface MapContainerProps {
 
 export default function MapContainer({ map }: MapContainerProps) {
   const markersRef = useRef<mapboxgl.Marker[]>([])
+  const businessMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const [currentZoom, setCurrentZoom] = useState(4)
   const {
     businessLocation,
@@ -190,10 +191,18 @@ export default function MapContainer({ map }: MapContainerProps) {
       }
     })
 
-    // Fit map to show all pins (only on initial load)
+    // Fit map to show all pins and business location (only on initial load)
     if (personPins.length > 0 && markersRef.current.length === clustered.length) {
       const bounds = new mapboxgl.LngLatBounds()
+      
+      // Include business location if available
+      if (businessLocation) {
+        bounds.extend(businessLocation.coordinates)
+      }
+      
+      // Include all person pins
       personPins.forEach(pin => bounds.extend(pin.coordinates))
+      
       map.fitBounds(bounds, {
         padding: 100,
         maxZoom: 15,
@@ -206,15 +215,67 @@ export default function MapContainer({ map }: MapContainerProps) {
     }
   }, [map, personPins, currentZoom])
 
-  // Center map on business location
+  // Render business location pin
   useEffect(() => {
-    if (!map || !businessLocation) return
+    if (!map || !businessLocation) {
+      // Remove business marker if no location
+      if (businessMarkerRef.current) {
+        businessMarkerRef.current.remove()
+        businessMarkerRef.current = null
+      }
+      return
+    }
 
+    // Remove existing business marker
+    if (businessMarkerRef.current) {
+      businessMarkerRef.current.remove()
+    }
+
+    // Create business location pin (distinct from person pins)
+    const el = document.createElement('div')
+    el.className = 'business-pin'
+    el.style.width = '48px'
+    el.style.height = '48px'
+    el.style.borderRadius = '50%'
+    el.style.background = 'radial-gradient(circle, #A855F7 0%, #7C3AED 100%)'
+    el.style.border = '4px solid white'
+    el.style.cursor = 'pointer'
+    el.style.boxShadow = '0 6px 20px rgba(168, 85, 247, 0.5)'
+    el.style.display = 'flex'
+    el.style.alignItems = 'center'
+    el.style.justifyContent = 'center'
+    el.style.fontSize = '24px'
+    el.style.zIndex = '1000'
+    el.innerHTML = '📍'
+
+    // Add click handler to show business info
+    el.addEventListener('click', () => {
+      map.flyTo({
+        center: businessLocation.coordinates,
+        zoom: Math.max(map.getZoom(), 15),
+        duration: 500,
+      })
+    })
+
+    const marker = new mapboxgl.Marker({ element: el })
+      .setLngLat(businessLocation.coordinates)
+      .addTo(map)
+
+    businessMarkerRef.current = marker
+
+    // Center map on business location
     map.flyTo({
       center: businessLocation.coordinates,
       zoom: 14,
       duration: 2000,
     })
+
+    return () => {
+      if (businessMarkerRef.current) {
+        businessMarkerRef.current.remove()
+        businessMarkerRef.current = null
+      }
+    }
   }, [map, businessLocation])
 
   return null
