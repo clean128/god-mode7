@@ -41,6 +41,13 @@ export default function MapContainer({ map }: MapContainerProps) {
           500
         )
 
+        // Ensure people is an array
+        if (!Array.isArray(people)) {
+          console.error('Expected array but got:', typeof people, people)
+          setError('Invalid response format from API. Expected array but got ' + typeof people)
+          return
+        }
+
         // Transform to pins
         const pins = people
           .filter((person: any) => {

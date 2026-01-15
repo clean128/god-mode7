@@ -41,21 +41,48 @@ class L2ApiClient {
     }
 
     try {
+      // Validate config
+      if (!this.config.customer || !this.config.apiKey || !this.config.app) {
+        throw new Error('L2 API configuration missing. Please set VITE_L2_API_CUSTOMER, VITE_L2_API_KEY, and VITE_L2_APP in your .env file.')
+      }
+
       const url = `${L2_API_BASE_URL}/api/v2/records/search/estimate/${this.config.customer}/${this.config.app}${this.getAuthParams()}`
       
       const response = await axios.post(url, {
         filters,
         ...(circleFilter && { circle_filter: circleFilter }),
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
 
-      const total = response.data.total as number
+      // Check for error response
+      if (response.data && response.data.result === 'fail') {
+        const errorMsg = response.data.message || 'Unknown API error'
+        throw new Error(`L2 API Error: ${errorMsg} (code: ${response.data.code || 'unknown'})`)
+      }
+
+      const total = response.data?.total as number
+      
+      if (typeof total !== 'number') {
+        console.warn('Unexpected estimate response format:', response.data)
+        throw new Error('Invalid response format from L2 API estimate endpoint')
+      }
       
       // Cache for 10 minutes (estimates don't change often)
       apiCache.set(cacheKey, total, 10 * 60 * 1000)
 
       return total
-    } catch (error) {
+    } catch (error: any) {
       console.error('L2 API Estimate Error:', error)
+      if (error.response) {
+        const errorData = error.response.data
+        if (errorData && errorData.result === 'fail') {
+          throw new Error(`L2 API Error: ${errorData.message || 'Unknown error'} (code: ${errorData.code || error.response.status})`)
+        }
+        throw new Error(`L2 API Request failed: ${error.response.status} ${error.response.statusText}`)
+      }
       throw error
     }
   }
@@ -81,11 +108,16 @@ class L2ApiClient {
     }
 
     try {
+      // Validate config
+      if (!this.config.customer || !this.config.apiKey || !this.config.app) {
+        throw new Error('L2 API configuration missing. Please set VITE_L2_API_CUSTOMER, VITE_L2_API_KEY, and VITE_L2_APP in your .env file.')
+      }
+
       // Always estimate first to prevent unexpected charges
       const estimate = await this.estimateSearch(filters, circleFilter)
       console.log(`Estimated results: ${estimate}`)
 
-      if (estimate === 0) {
+      if (estimate === 0 || !estimate) {
         // Cache empty results too
         apiCache.set(cacheKey, [], 5 * 60 * 1000)
         return []
@@ -97,17 +129,73 @@ class L2ApiClient {
         filters,
         ...(circleFilter && { circle_filter: circleFilter }),
         format: 'json',
+        fieldset: 'EXTENDED',
         limit: Math.min(limit, 500), // Max 500 for JSON format
+        wait: 30000, // Wait up to 30 seconds
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
 
-      const results = response.data as any[]
+      // Check for error response
+      if (response.data && response.data.result === 'fail') {
+        const errorMsg = response.data.message || 'Unknown API error'
+        throw new Error(`L2 API Error: ${errorMsg} (code: ${response.data.code || 'unknown'})`)
+      }
+
+      // Handle response formats - check for success response with data
+      let results: any[] = []
+      const data = response.data
+
+      if (response.data && response.data.result === 'ok' && response.data.data) {
+        // Success response with data property
+        results = Array.isArray(response.data.data) ? response.data.data : []
+      } else if (Array.isArray(data)) {
+        // Direct array response
+        results = data
+      } else if (data && Array.isArray(data.data)) {
+        // Response with data property
+        results = data.data
+      } else if (data && Array.isArray(data.records)) {
+        // Response with records property
+        results = data.records
+      } else if (data && Array.isArray(data.results)) {
+        // Response with results property
+        results = data.results
+      } else if (data && typeof data === 'object') {
+        // Try to find any array property
+        const arrayKeys = Object.keys(data).filter(key => Array.isArray(data[key]))
+        if (arrayKeys.length > 0) {
+          results = data[arrayKeys[0]]
+        } else {
+          console.warn('L2 API response format not recognized:', data)
+          results = []
+        }
+      } else {
+        console.warn('L2 API returned unexpected response type:', typeof data, data)
+        results = []
+      }
+
+      // Ensure we return an array
+      if (!Array.isArray(results)) {
+        console.error('L2 API did not return an array:', results)
+        return []
+      }
       
       // Cache results for 5 minutes
       apiCache.set(cacheKey, results, 5 * 60 * 1000)
 
       return results
-    } catch (error) {
+    } catch (error: any) {
       console.error('L2 API Search Error:', error)
+      if (error.response) {
+        const errorData = error.response.data
+        if (errorData && errorData.result === 'fail') {
+          throw new Error(`L2 API Error: ${errorData.message || 'Unknown error'} (code: ${errorData.code || error.response.status})`)
+        }
+        throw new Error(`L2 API Request failed: ${error.response.status} ${error.response.statusText}`)
+      }
       throw error
     }
   }
