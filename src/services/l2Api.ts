@@ -13,11 +13,28 @@ class L2ApiClient {
   private config: L2ApiConfig
 
   constructor() {
+    const appValue = import.meta.env.VITE_L2_APP || 'COM_US'
+    
+    // Validate app value - it should NOT be a URL
+    if (appValue.includes('http://') || appValue.includes('https://') || appValue.includes('api.l2datamapping.com')) {
+      console.error('❌ Invalid VITE_L2_APP value:', appValue)
+      console.error('📝 VITE_L2_APP should be an application ID like "COM_US", "VM_CA", etc.')
+      console.error('📝 It should NOT be a URL like "https://api.l2datamapping.com"')
+      throw new Error(`Invalid VITE_L2_APP value: "${appValue}". It should be an application ID (e.g., "COM_US"), not a URL.`)
+    }
+
     this.config = {
       customer: import.meta.env.VITE_L2_API_CUSTOMER || '',
       apiKey: import.meta.env.VITE_L2_API_KEY || '',
-      app: import.meta.env.VITE_L2_APP || 'COM_US',
+      app: appValue,
     }
+
+    // Log config (without exposing API key)
+    console.log('🔧 L2 API Config:', {
+      customer: this.config.customer,
+      app: this.config.app,
+      hasApiKey: !!this.config.apiKey,
+    })
   }
 
   private getAuthParams() {
@@ -48,6 +65,9 @@ class L2ApiClient {
 
       const url = `${L2_API_BASE_URL}/api/v2/records/search/estimate/${this.config.customer}/${this.config.app}${this.getAuthParams()}`
       
+      console.log('🔍 L2 API Estimate Request URL:', url.replace(/apikey=[^&]+/, 'apikey=***'))
+      console.log('🔍 Request body:', { filters, circleFilter })
+      
       const response = await axios.post(url, {
         filters,
         ...(circleFilter && { circle_filter: circleFilter }),
@@ -63,11 +83,35 @@ class L2ApiClient {
         throw new Error(`L2 API Error: ${errorMsg} (code: ${response.data.code || 'unknown'})`)
       }
 
-      const total = response.data?.total as number
-      
-      if (typeof total !== 'number') {
-        console.warn('Unexpected estimate response format:', response.data)
-        throw new Error('Invalid response format from L2 API estimate endpoint')
+      // Log the full response for debugging
+      console.log('📊 L2 API Estimate Response:', {
+        status: response.status,
+        data: response.data,
+        dataType: typeof response.data,
+        hasTotal: 'total' in (response.data || {}),
+        totalValue: response.data?.total,
+        totalType: typeof response.data?.total,
+      })
+
+      // Try to extract total from various possible response formats
+      let total: number | undefined
+
+      if (typeof response.data === 'number') {
+        // Direct number response
+        total = response.data
+      } else if (response.data && typeof response.data === 'object') {
+        // Try different property names
+        total = response.data.total ?? response.data.count ?? response.data.estimated ?? response.data.estimate
+      }
+
+      if (typeof total !== 'number' || isNaN(total)) {
+        console.error('❌ Unexpected estimate response format:', {
+          responseData: response.data,
+          responseStatus: response.status,
+          responseHeaders: response.headers,
+          extractedTotal: total,
+        })
+        throw new Error(`Invalid response format from L2 API estimate endpoint. Expected {total: number} but got: ${JSON.stringify(response.data)}`)
       }
       
       // Cache for 10 minutes (estimates don't change often)
