@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { mapboxgl as mapbox } from '../services/mapboxApi'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { useMapStore } from '../store/mapStore'
 import { useOnboarding } from '../contexts/OnboardingContext'
 import MapContainer from '../components/map/MapContainer'
@@ -11,6 +12,7 @@ import ProgressIndicator from '../components/onboarding/ProgressIndicator'
 
 export default function MapPage() {
     const mapContainerRef = useRef<HTMLDivElement>(null)
+    const mapRef = useRef<mapboxgl.Map | null>(null) // Local ref to prevent double init
     const [searchParams] = useSearchParams()
     const onboardingStep = parseInt(searchParams.get('step') || '0')
 
@@ -32,14 +34,24 @@ export default function MapPage() {
 
     // Initialize map
     useEffect(() => {
-        if (!mapContainerRef.current || mapInstance) return
+        // Prevent double initialization (React StrictMode)
+        if (!mapContainerRef.current || mapRef.current) return
+
+        const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
+        if (!token) {
+            console.warn('VITE_MAPBOX_ACCESS_TOKEN is not set.')
+            return
+        }
+
+        // Set access token directly
+        mapboxgl.accessToken = token
 
         // Suppress Mapbox internal warnings (harmless but noisy)
         const originalWarn = console.warn
         const warningFilter = (...args: any[]) => {
             const message = args[0]?.toString() || ''
             // Filter out Mapbox feature selector warnings
-            if (message.includes('featureNamespace') || 
+            if (message.includes('featureNamespace') ||
                 message.includes('featureset') ||
                 message.includes("selector is not associated to the same source")) {
                 return // Suppress these warnings
@@ -48,34 +60,49 @@ export default function MapPage() {
         }
         console.warn = warningFilter
 
-        const map = new mapbox.Map({
+        const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/streets-v12',
-            // config: {
-            //     basemap: {
-            //         lightPreset: "dusk",
-            //         showRoadLabels: false,
-            //         showTransitLabels: false,
-            //         font: "Frank Ruhl Libre",
-            //         show3dFacades: true,
-            //         showLandmarkIcons: true,
-            //         colorBuildings: "#d0c7b3"
-            //     }
-            // },
-            center: [-98.5795, 39.8283], // Center of USA
-            zoom: 4,
+            style: 'mapbox://styles/mapbox/standard',
+            config: {
+                basemap: {
+                    lightPreset: "dusk",
+                    showRoadLabels: false,
+                    showTransitLabels: false,
+                    font: "Frank Ruhl Libre",
+                    show3dFacades: true,
+                    showLandmarkIcons: true,
+                    colorBuildings: "#d0c7b3"
+                }
+            },
+            center: [-74.006, 40.7128], // Center of USA
+            zoom: 14,
+            antialias: true,
         })
+
+        mapRef.current = map // Store in local ref (prevents double init)
 
         map.on('load', () => {
             setMapInstance(map)
+            // Force resize to ensure map renders correctly
+            setTimeout(() => {
+                map.resize()
+            }, 100)
+        })
+
+        map.on('error', (e) => {
+            console.error('Map error:', e.error)
         })
 
         return () => {
             // Restore original console.warn on cleanup
             console.warn = originalWarn
-            map.remove()
+            if (mapRef.current) {
+                mapRef.current.remove()
+                mapRef.current = null // 🔴 THIS IS CRITICAL (prevents memory leaks)
+            }
         }
-    }, [mapInstance, setMapInstance])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Empty array - only run once on mount
 
     // Handle onboarding step
     useEffect(() => {
@@ -87,7 +114,11 @@ export default function MapPage() {
     return (
         <div className="relative w-full h-screen overflow-hidden">
             {/* Map Container */}
-            <div ref={mapContainerRef} className="absolute inset-0" />
+            <div
+                ref={mapContainerRef}
+                className="absolute inset-0"
+                style={{ width: '100%', height: '100%' }}
+            />
 
             {mapInstance && (
                 <>
