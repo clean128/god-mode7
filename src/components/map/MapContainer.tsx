@@ -31,41 +31,104 @@ export default function MapContainer({ map }: MapContainerProps) {
       try {
         const [lng, lat] = businessLocation.coordinates
         
-        // Search for people within 5km radius
+        // Search for people within 30km radius from business location
+        console.log('🔍 Searching for people within 30km of business:', { lat, lng, radius: 30000 })
         const people = await l2Api.searchPeople(
           {},
           {
             lat,
             long: lng,
-            radius: 5000, // 5km in meters
+            radius: 30000, // 30km in meters
           },
           500
         )
 
+        console.log('👥 People data received:', {
+          type: typeof people,
+          isArray: Array.isArray(people),
+          length: Array.isArray(people) ? people.length : 0,
+          firstPerson: Array.isArray(people) && people.length > 0 ? people[0] : null,
+        })
+
         // Ensure people is an array
         if (!Array.isArray(people)) {
-          console.error('Expected array but got:', typeof people, people)
+          console.error('❌ Expected array but got:', typeof people, people)
           setError('Invalid response format from API. Expected array but got ' + typeof people)
           return
         }
 
+        if (people.length === 0) {
+          console.warn('⚠️ No people found within 30km radius')
+          setPersonPins([])
+          return
+        }
+
+        // Log first person's available fields to debug coordinate field names
+        if (people.length > 0) {
+          const firstPerson = people[0]
+          const coordinateFields = Object.keys(firstPerson).filter(key => 
+            key.toLowerCase().includes('lat') || 
+            key.toLowerCase().includes('lng') || 
+            key.toLowerCase().includes('long') ||
+            key.toLowerCase().includes('lon')
+          )
+          console.log('📍 Available coordinate fields in person data:', coordinateFields)
+          console.log('📋 Sample person fields:', Object.keys(firstPerson).slice(0, 20))
+        }
+
         // Transform to pins
         const pins = people
-          .filter((person: any) => {
-            // Filter people with valid coordinates
-            const personLat = person.Residence_Addresses_Latitude
-            const personLng = person.Residence_Addresses_Longitude
-            return personLat && personLng
-          })
-          .map((person: any) => ({
-            id: person.LALVOTERID || `person-${Math.random()}`,
-            coordinates: [
-              parseFloat(person.Residence_Addresses_Longitude),
-              parseFloat(person.Residence_Addresses_Latitude),
-            ] as [number, number],
-            data: person,
-          }))
+          .map((person: any) => {
+            // Try multiple possible coordinate field names
+            let personLat = person.Residence_Addresses_Latitude || 
+                           person.Latitude || 
+                           person.latitude ||
+                           person.LAT ||
+                           person.Residence_Latitude ||
+                           person.Address_Latitude
+            
+            let personLng = person.Residence_Addresses_Longitude || 
+                           person.Longitude || 
+                           person.longitude ||
+                           person.LONG ||
+                           person.LON ||
+                           person.Residence_Longitude ||
+                           person.Address_Longitude
 
+            // If still not found, check nested objects
+            if (!personLat && person.Residence_Addresses) {
+              personLat = person.Residence_Addresses.Latitude || person.Residence_Addresses.latitude
+            }
+            if (!personLng && person.Residence_Addresses) {
+              personLng = person.Residence_Addresses.Longitude || person.Residence_Addresses.longitude
+            }
+
+            const hasValidCoords = personLat != null && personLng != null && 
+                                 !isNaN(parseFloat(personLat)) && 
+                                 !isNaN(parseFloat(personLng))
+            
+            if (!hasValidCoords) {
+              console.warn('⚠️ Person missing coordinates:', {
+                id: person.LALVOTERID,
+                availableFields: Object.keys(person).filter(k => 
+                  k.toLowerCase().includes('lat') || k.toLowerCase().includes('lng') || k.toLowerCase().includes('long')
+                ),
+              })
+              return null
+            }
+            
+            return {
+              id: person.LALVOTERID || `person-${Math.random()}`,
+              coordinates: [
+                parseFloat(personLng),
+                parseFloat(personLat),
+              ] as [number, number],
+              data: person,
+            }
+          })
+          .filter((pin): pin is NonNullable<typeof pin> => pin !== null)
+
+        console.log(`✅ Created ${pins.length} pins from ${people.length} people (${people.length - pins.length} filtered out)`)
         setPersonPins(pins)
       } catch (error: any) {
         console.error('Error loading people data:', error)
