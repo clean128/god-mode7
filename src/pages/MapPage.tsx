@@ -9,6 +9,7 @@ import BusinessSearch from '../components/map/BusinessSearch'
 import PersonPinModal from '../components/map/PersonPinModal'
 import OnboardingOverlay from '../components/onboarding/OnboardingOverlay'
 import ProgressIndicator from '../components/onboarding/ProgressIndicator'
+import LoadingStatusBar from '../components/ui/LoadingStatusBar'
 
 export default function MapPage() {
     const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -21,6 +22,7 @@ export default function MapPage() {
         setMapInstance,
         selectedPin,
         setSelectedPin,
+        isLoading,
     } = useMapStore()
 
     const {
@@ -124,6 +126,9 @@ export default function MapPage() {
                 <>
                     <MapContainer map={mapInstance} />
 
+                    {/* Loading Status Bar - Show when fetching people data */}
+                    <LoadingStatusBar isVisible={isLoading} />
+
                     {/* Business Search - Must be above overlay (z-40) */}
                     <div className="absolute top-4 left-4 right-4 z-50 flex justify-center">
                         <div className="w-full max-w-xl">
@@ -135,8 +140,8 @@ export default function MapPage() {
                     {isFirstTime && currentStep > 0 && (
                         <div className="absolute top-20 left-4 right-4 z-10 flex justify-center">
                             <div className="w-full max-w-xl">
-                            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-                        </div>
+                                <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+                            </div>
                         </div>
                     )}
 
