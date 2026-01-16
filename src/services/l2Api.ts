@@ -100,8 +100,14 @@ class L2ApiClient {
         // Direct number response
         total = response.data
       } else if (response.data && typeof response.data === 'object') {
-        // Try different property names
-        total = response.data.total ?? response.data.count ?? response.data.estimated ?? response.data.estimate
+        // Try different property names and nested structures
+        // Handle: {"results":{"count":884974,"households":584688},"result":"ok","code":200}
+        if (response.data.results && typeof response.data.results.count === 'number') {
+          total = response.data.results.count
+        } else {
+          // Try other common formats
+          total = response.data.total ?? response.data.count ?? response.data.estimated ?? response.data.estimate
+        }
       }
 
       if (typeof total !== 'number' || isNaN(total)) {
@@ -111,7 +117,7 @@ class L2ApiClient {
           responseHeaders: response.headers,
           extractedTotal: total,
         })
-        throw new Error(`Invalid response format from L2 API estimate endpoint. Expected {total: number} but got: ${JSON.stringify(response.data)}`)
+        throw new Error(`Invalid response format from L2 API estimate endpoint. Expected {total: number} or {results: {count: number}} but got: ${JSON.stringify(response.data)}`)
       }
       
       // Cache for 10 minutes (estimates don't change often)
@@ -188,13 +194,39 @@ class L2ApiClient {
         throw new Error(`L2 API Error: ${errorMsg} (code: ${response.data.code || 'unknown'})`)
       }
 
+      // Log the full response for debugging
+      console.log('📊 L2 API Search Response:', {
+        status: response.status,
+        data: response.data,
+        dataType: typeof response.data,
+        hasData: 'data' in (response.data || {}),
+        hasResults: 'results' in (response.data || {}),
+        hasRecords: 'records' in (response.data || {}),
+      })
+
       // Handle response formats - check for success response with data
       let results: any[] = []
       const data = response.data
 
-      if (response.data && response.data.result === 'ok' && response.data.data) {
-        // Success response with data property
-        results = Array.isArray(response.data.data) ? response.data.data : []
+      // Handle response format similar to estimate: {result: "ok", results: {...}, code: 200}
+      // But for search, results might contain the actual data array
+      if (response.data && response.data.result === 'ok') {
+        // Check if results contains an array of records
+        if (response.data.results && Array.isArray(response.data.results)) {
+          results = response.data.results
+        } else if (response.data.results && Array.isArray(response.data.results.data)) {
+          // Nested: results.data
+          results = response.data.results.data
+        } else if (response.data.results && Array.isArray(response.data.results.records)) {
+          // Nested: results.records
+          results = response.data.results.records
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          // Direct: data property
+          results = response.data.data
+        } else if (Array.isArray(response.data.results)) {
+          // results is directly an array
+          results = response.data.results
+        }
       } else if (Array.isArray(data)) {
         // Direct array response
         results = data
@@ -212,6 +244,7 @@ class L2ApiClient {
         const arrayKeys = Object.keys(data).filter(key => Array.isArray(data[key]))
         if (arrayKeys.length > 0) {
           results = data[arrayKeys[0]]
+          console.log(`📦 Found array in property: ${arrayKeys[0]}, length: ${results.length}`)
         } else {
           console.warn('L2 API response format not recognized:', data)
           results = []
@@ -220,6 +253,8 @@ class L2ApiClient {
         console.warn('L2 API returned unexpected response type:', typeof data, data)
         results = []
       }
+
+      console.log(`✅ Extracted ${results.length} people records from search response`)
 
       // Ensure we return an array
       if (!Array.isArray(results)) {
