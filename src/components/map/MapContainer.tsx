@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
-import * as THREE from 'three'
 import { useMapStore } from '../../store/mapStore'
 import { l2Api } from '../../services/l2Api'
-import { clusterPins, isCluster } from '../../utils/pinClustering'
 import GameNotification from '../ui/GameNotification'
 
 interface MapContainerProps {
@@ -13,6 +11,8 @@ interface MapContainerProps {
 export default function MapContainer({ map }: MapContainerProps) {
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const businessMarkerRef = useRef<mapboxgl.Marker | null>(null)
+  const hasFittedBoundsRef = useRef(false)
+  const lastPersonPinsCountRef = useRef(0)
   const [currentZoom, setCurrentZoom] = useState(4)
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -209,67 +209,30 @@ export default function MapContainer({ map }: MapContainerProps) {
 
   // Render person pins on map with clustering
   useEffect(() => {
-    if (!map || personPins.length === 0) return
+    if (!map || personPins.length === 0) {
+      // Reset fit bounds flag when pins are cleared
+      hasFittedBoundsRef.current = false
+      lastPersonPinsCountRef.current = 0
+      return
+    }
 
-    // Clear existing markers and cleanup Three.js resources
+    // Check if this is a new set of pins (different count than before)
+    const isNewPinSet = personPins.length !== lastPersonPinsCountRef.current
+    if (isNewPinSet) {
+      // Reset fit bounds flag for new pin set
+      hasFittedBoundsRef.current = false
+      lastPersonPinsCountRef.current = personPins.length
+    }
+
+    // Clear existing markers
     markersRef.current.forEach(marker => {
-      const element = marker.getElement()
-      if (element && (element as any).__threeCleanup) {
-        (element as any).__threeCleanup()
-      }
       marker.remove()
     })
     markersRef.current = []
 
-    // Cluster pins based on zoom level (radius in meters)
-    const clustered = clusterPins(personPins, currentZoom, 100)
-
-    // Create markers for clusters and individual pins
-    clustered.forEach((item) => {
-      if (isCluster(item)) {
-        // Render cluster
-        const el = document.createElement('div')
-        el.className = 'person-pin-cluster'
-        el.style.width = '48px'
-        el.style.height = '48px'
-        el.style.borderRadius = '50%'
-        el.style.background = 'radial-gradient(circle, #FF6B35 0%, #FFD93D 100%)'
-        el.style.border = '3px solid white'
-        el.style.cursor = 'pointer'
-        el.style.boxShadow = '0 4px 12px rgba(255, 107, 53, 0.4)'
-        el.style.display = 'flex'
-        el.style.alignItems = 'center'
-        el.style.justifyContent = 'center'
-        el.style.fontSize = '16px'
-        el.style.fontWeight = 'bold'
-        el.style.color = 'white'
-        el.innerHTML = item.count.toString()
-
-        // Add hover effect
-        el.addEventListener('mouseenter', () => {
-          el.style.transform = 'scale(1.15)'
-          el.style.transition = 'transform 0.2s'
-        })
-        el.addEventListener('mouseleave', () => {
-          el.style.transform = 'scale(1)'
-        })
-
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat(item.coordinates)
-          .addTo(map)
-
-        // Click cluster to zoom in
-        el.addEventListener('click', () => {
-          map.flyTo({
-            center: item.coordinates,
-            zoom: Math.min(map.getZoom() + 2, 18),
-            duration: 500,
-          })
-        })
-
-        markersRef.current.push(marker)
-      } else {
-        // Render individual pin with Three.js effects - Game-style enhanced
+    // Display all individual pins (no clustering)
+    personPins.forEach((item) => {
+        // Render individual pin - Game-style enhanced
         const el = document.createElement('div')
         el.className = 'person-pin'
         el.style.width = '48px'
@@ -277,114 +240,69 @@ export default function MapContainer({ map }: MapContainerProps) {
         el.style.borderRadius = '50%'
         el.style.background = 'radial-gradient(circle, #00D9FF 0%, #4A90E2 50%, #357ABD 100%)'
         el.style.border = '4px solid white'
-        el.style.cursor = 'pointer'
         el.style.boxShadow = '0 6px 20px rgba(0, 217, 255, 0.6), 0 0 30px rgba(0, 217, 255, 0.3)'
         el.style.display = 'flex'
         el.style.alignItems = 'center'
         el.style.justifyContent = 'center'
         el.style.fontSize = '28px'
-        el.style.transition = 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
-        el.style.position = 'relative'
-        el.style.overflow = 'hidden'
+        el.style.cursor = 'pointer'
         el.innerHTML = '👤'
 
-        // Create Three.js canvas for particle effects on pin
-        const canvas = document.createElement('canvas')
-        canvas.width = 48
-        canvas.height = 48
-        canvas.style.position = 'absolute'
-        canvas.style.top = '0'
-        canvas.style.left = '0'
-        canvas.style.pointerEvents = 'none'
-        canvas.style.opacity = '0.4'
-        el.appendChild(canvas)
-
-        const scene = new THREE.Scene()
-        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
-        camera.position.z = 5
-
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
-        renderer.setSize(48, 48)
-        renderer.setClearColor(0x000000, 0)
-
-        // Create particles for pin
-        const particlesGeometry = new THREE.BufferGeometry()
-        const particlesCount = 15
-        const posArray = new Float32Array(particlesCount * 3)
-
-        for (let i = 0; i < particlesCount * 3; i++) {
-          posArray[i] = (Math.random() - 0.5) * 2
-        }
-
-        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3))
-
-        const particlesMaterial = new THREE.PointsMaterial({
-          size: 0.15,
-          color: 0x00d9ff,
-          transparent: true,
-          opacity: 0.8,
+        const marker = new mapboxgl.Marker({ 
+          element: el,
+          anchor: 'center'
         })
-
-        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial)
-        scene.add(particlesMesh)
-
-        let animationFrameId: number
-        const animate = () => {
-          animationFrameId = requestAnimationFrame(animate)
-          particlesMesh.rotation.y += 0.02
-          particlesMesh.rotation.x += 0.01
-          renderer.render(scene, camera)
-        }
-        animate()
-
-        // Store cleanup function
-        ;(el as any).__threeCleanup = () => {
-          cancelAnimationFrame(animationFrameId)
-          renderer.dispose()
-          particlesGeometry.dispose()
-          particlesMaterial.dispose()
-        }
-
-        // Add CSS animation for pulse effect
-        const style = document.createElement('style')
-        style.textContent = `
-          @keyframes pulse {
-            0%, 100% { box-shadow: 0 6px 20px rgba(0, 217, 255, 0.6), 0 0 30px rgba(0, 217, 255, 0.3); }
-            50% { box-shadow: 0 8px 25px rgba(0, 217, 255, 0.8), 0 0 40px rgba(0, 217, 255, 0.5); }
-          }
-        `
-        if (!document.head.querySelector('style[data-pin-animation]')) {
-          style.setAttribute('data-pin-animation', 'true')
-          document.head.appendChild(style)
-        }
-
-        // Add hover effect with bounce
-        el.addEventListener('mouseenter', () => {
-          el.style.transform = 'scale(1.3) rotate(5deg)'
-          el.style.transition = 'transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
-          el.style.boxShadow = '0 10px 30px rgba(0, 217, 255, 0.8), 0 0 50px rgba(0, 217, 255, 0.6)'
-        })
-        el.addEventListener('mouseleave', () => {
-          el.style.transform = 'scale(1) rotate(0deg)'
-          el.style.transition = 'transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
-        })
-
-        const marker = new mapboxgl.Marker(el)
           .setLngLat(item.coordinates)
           .addTo(map)
 
-        // Add click handler
-        el.addEventListener('click', () => {
-          const { setSelectedPin } = useMapStore.getState()
-          setSelectedPin(item)
+        // Track if user is dragging to distinguish from click
+        let isDragging = false
+        let dragStartX = 0
+        let dragStartY = 0
+
+        el.addEventListener('mousedown', (e) => {
+          if (e.button === 0) {
+            dragStartX = e.clientX
+            dragStartY = e.clientY
+            isDragging = false
+
+            const onMouseMove = (moveEvent: MouseEvent) => {
+              const deltaX = Math.abs(moveEvent.clientX - dragStartX)
+              const deltaY = Math.abs(moveEvent.clientY - dragStartY)
+              if (deltaX > 3 || deltaY > 3) {
+                isDragging = true
+                // Temporarily disable pointer events to allow map drag
+                el.style.pointerEvents = 'none'
+              }
+            }
+
+            const onMouseUp = () => {
+              if (!isDragging) {
+                // It was a click, not a drag - show person modal
+                const { setSelectedPin } = useMapStore.getState()
+                setSelectedPin(item)
+              }
+              // Restore pointer events
+              el.style.pointerEvents = 'auto'
+              document.removeEventListener('mousemove', onMouseMove)
+              document.removeEventListener('mouseup', onMouseUp)
+            }
+
+            document.addEventListener('mousemove', onMouseMove)
+            document.addEventListener('mouseup', onMouseUp)
+          }
         })
 
+        // Allow wheel events to pass through for zooming
+        el.addEventListener('wheel', () => {
+          // Don't stop propagation - let map handle zoom
+        }, { passive: true })
+
         markersRef.current.push(marker)
-      }
     })
 
-    // Fit map to show all pins and business location (only on initial load)
-    if (personPins.length > 0 && markersRef.current.length === clustered.length) {
+    // Fit map to show all pins and business location (only once per new pin set)
+    if (!hasFittedBoundsRef.current && personPins.length > 0 && markersRef.current.length === personPins.length) {
       const bounds = new mapboxgl.LngLatBounds()
       
       // Include business location if available
@@ -399,20 +317,19 @@ export default function MapContainer({ map }: MapContainerProps) {
         padding: 100,
         maxZoom: 15,
       })
+      
+      // Mark that we've fitted bounds for this pin set
+      hasFittedBoundsRef.current = true
     }
 
     return () => {
-      // Cleanup Three.js resources and remove markers
+      // Remove markers
       markersRef.current.forEach(marker => {
-        const element = marker.getElement()
-        if (element && (element as any).__threeCleanup) {
-          (element as any).__threeCleanup()
-        }
         marker.remove()
       })
       markersRef.current = []
     }
-  }, [map, personPins, currentZoom])
+  }, [map, personPins, businessLocation])
 
   // Render business location pin
   useEffect(() => {
