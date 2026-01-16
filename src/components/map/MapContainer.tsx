@@ -245,7 +245,7 @@ export default function MapContainer({ map }: MapContainerProps) {
     el.style.alignItems = 'center'
     el.style.justifyContent = 'center'
     el.style.fontSize = '24px'
-    el.style.zIndex = '1000'
+    el.style.zIndex = '10'
     el.innerHTML = '📍'
 
     // Add click handler to show business info
