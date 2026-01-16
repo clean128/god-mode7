@@ -14,9 +14,39 @@ export default function GameNotification({ message, isVisible, onClose, duration
   const sceneRef = useRef<THREE.Scene | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const particlesMeshRef = useRef<THREE.Points | null>(null)
+  const particlesGeometryRef = useRef<THREE.BufferGeometry | null>(null)
+  const particlesMaterialRef = useRef<THREE.PointsMaterial | null>(null)
 
   useEffect(() => {
-    if (!isVisible || !containerRef.current) return
+    if (!isVisible || !containerRef.current) {
+      // Cleanup when not visible
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+      if (rendererRef.current) {
+        if (rendererRef.current.domElement.parentNode) {
+          rendererRef.current.domElement.parentNode.removeChild(rendererRef.current.domElement)
+        }
+        rendererRef.current.dispose()
+        rendererRef.current = null
+      }
+      if (particlesGeometryRef.current) {
+        particlesGeometryRef.current.dispose()
+        particlesGeometryRef.current = null
+      }
+      if (particlesMaterialRef.current) {
+        particlesMaterialRef.current.dispose()
+        particlesMaterialRef.current = null
+      }
+      particlesMeshRef.current = null
+      sceneRef.current = null
+      return
+    }
+
+    // Don't recreate if already exists
+    if (rendererRef.current) return
 
     // Create Three.js scene for particle effects
     const scene = new THREE.Scene()
@@ -34,6 +64,7 @@ export default function GameNotification({ message, isVisible, onClose, duration
 
     // Create particles
     const particlesGeometry = new THREE.BufferGeometry()
+    particlesGeometryRef.current = particlesGeometry
     const particlesCount = 30
     const posArray = new Float32Array(particlesCount * 3)
 
@@ -49,15 +80,18 @@ export default function GameNotification({ message, isVisible, onClose, duration
       transparent: true,
       opacity: 0.8,
     })
+    particlesMaterialRef.current = particlesMaterial
 
     const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial)
+    particlesMeshRef.current = particlesMesh
     scene.add(particlesMesh)
 
     const animate = () => {
+      if (!rendererRef.current || !particlesMeshRef.current) return
       animationFrameRef.current = requestAnimationFrame(animate)
-      particlesMesh.rotation.y += 0.02
-      particlesMesh.rotation.x += 0.01
-      renderer.render(scene, camera)
+      particlesMeshRef.current.rotation.y += 0.02
+      particlesMeshRef.current.rotation.x += 0.01
+      rendererRef.current.render(scene, camera)
     }
 
     animate()
@@ -65,11 +99,25 @@ export default function GameNotification({ message, isVisible, onClose, duration
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
       }
-      if (rendererRef.current && containerRef.current && rendererRef.current.domElement.parentNode) {
-        containerRef.current.removeChild(rendererRef.current.domElement)
+      if (rendererRef.current) {
+        if (rendererRef.current.domElement.parentNode) {
+          rendererRef.current.domElement.parentNode.removeChild(rendererRef.current.domElement)
+        }
         rendererRef.current.dispose()
+        rendererRef.current = null
       }
+      if (particlesGeometryRef.current) {
+        particlesGeometryRef.current.dispose()
+        particlesGeometryRef.current = null
+      }
+      if (particlesMaterialRef.current) {
+        particlesMaterialRef.current.dispose()
+        particlesMaterialRef.current = null
+      }
+      particlesMeshRef.current = null
+      sceneRef.current = null
     }
   }, [isVisible])
 
