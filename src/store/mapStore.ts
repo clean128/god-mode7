@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import type mapboxgl from 'mapbox-gl'
 
 interface BusinessLocation {
   name: string
