@@ -186,13 +186,20 @@ export default function MapContainer({ map }: MapContainerProps) {
   useEffect(() => {
     if (!map) return
 
+    let lastZoom = map.getZoom()
+    setCurrentZoom(lastZoom)
+
     const updateZoom = () => {
-      setCurrentZoom(map.getZoom())
+      const newZoom = map.getZoom()
+      // Only update if zoom changed significantly (avoid infinite loops)
+      if (Math.abs(newZoom - lastZoom) > 0.01) {
+        lastZoom = newZoom
+        setCurrentZoom(newZoom)
+      }
     }
 
     map.on('zoom', updateZoom)
     map.on('zoomend', updateZoom)
-    updateZoom() // Initial zoom
 
     return () => {
       map.off('zoom', updateZoom)
