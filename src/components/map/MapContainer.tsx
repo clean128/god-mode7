@@ -13,7 +13,6 @@ export default function MapContainer({ map }: MapContainerProps) {
   const businessMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const hasFittedBoundsRef = useRef(false)
   const lastPersonPinsCountRef = useRef(0)
-  const [currentZoom, setCurrentZoom] = useState(4)
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const {
@@ -181,31 +180,6 @@ export default function MapContainer({ map }: MapContainerProps) {
 
     loadPeopleData()
   }, [businessLocation, map, setPersonPins, setLoading, setError])
-
-  // Track zoom level for clustering
-  useEffect(() => {
-    if (!map) return
-
-    let lastZoom = map.getZoom()
-    setCurrentZoom(lastZoom)
-
-    const updateZoom = () => {
-      const newZoom = map.getZoom()
-      // Only update if zoom changed significantly (avoid infinite loops)
-      if (Math.abs(newZoom - lastZoom) > 0.01) {
-        lastZoom = newZoom
-        setCurrentZoom(newZoom)
-      }
-    }
-
-    map.on('zoom', updateZoom)
-    map.on('zoomend', updateZoom)
-
-    return () => {
-      map.off('zoom', updateZoom)
-      map.off('zoomend', updateZoom)
-    }
-  }, [map])
 
   // Render person pins on map with clustering
   useEffect(() => {
