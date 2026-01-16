@@ -144,7 +144,7 @@ export default function BusinessSearch() {
       )}
 
       {/* Onboarding Tooltip for Step 2 */}
-      {currentStep === 2 && (
+      {currentStep === 2 && !query.trim() && (
         <div className="absolute top-full left-0 right-0 mt-4 p-4 bg-yellow-100 border-2 border-yellow-400 rounded-game shadow-lg z-30">
           <div className="flex items-start gap-3">
             <span className="text-2xl">👆</span>
