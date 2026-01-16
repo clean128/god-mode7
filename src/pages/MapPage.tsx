@@ -125,14 +125,18 @@ export default function MapPage() {
                     <MapContainer map={mapInstance} />
 
                     {/* Business Search - Must be above overlay (z-40) */}
-                    <div className="absolute top-4 left-4 right-4 z-50">
-                        <BusinessSearch />
+                    <div className="absolute top-4 left-4 right-4 z-50 flex justify-center">
+                        <div className="w-full max-w-xl">
+                            <BusinessSearch />
+                        </div>
                     </div>
 
                     {/* Progress Indicator (during onboarding) */}
                     {isFirstTime && currentStep > 0 && (
-                        <div className="absolute top-20 left-4 right-4 z-10">
+                        <div className="absolute top-20 left-4 right-4 z-10 flex justify-center">
+                            <div className="w-full max-w-xl">
                             <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+                        </div>
                         </div>
                     )}
 
