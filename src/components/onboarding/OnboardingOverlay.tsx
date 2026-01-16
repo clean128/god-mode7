@@ -102,12 +102,16 @@ export default function OnboardingOverlay({
       >
         {/* Highlight overlay for specific elements */}
         {highlight === 'search' && (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="absolute top-4 left-4 right-4 h-14 bg-yellow-400 bg-opacity-20 border-4 border-yellow-400 rounded-game pointer-events-none"
-            style={{ animation: 'pulse 2s infinite' }}
-          />
+          <div className="absolute top-4 left-4 right-4 z-50 flex justify-center">
+            <div className="w-full max-w-xl">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="absolute h-14 bg-yellow-400 bg-opacity-20 border-4 border-yellow-400 rounded-game pointer-events-none w-full max-w-xl"
+                style={{ animation: 'pulse 2s infinite' }}
+              />
+            </div>
+          </div>
         )}
 
         {/* Tooltip Card */}
@@ -128,7 +132,7 @@ export default function OnboardingOverlay({
           <div className="bg-white rounded-game p-6 shadow-2xl border-2 border-game-primary">
             <h3 className="font-display text-2xl text-gray-900 mb-2">{title}</h3>
             <p className="font-body text-base text-gray-700 mb-6">{message}</p>
-            
+
             <div className="flex gap-3">
               {currentStep > 1 && completedSteps.size > 0 && (
                 <button
