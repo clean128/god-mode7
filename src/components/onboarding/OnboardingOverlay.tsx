@@ -79,11 +79,11 @@ export default function OnboardingOverlay({
   const getPositionClasses = () => {
     switch (position) {
       case 'top':
-        return 'top-32 left-4 right-4'
+        return 'transform -translate-x-1/2'
       case 'center':
-        return 'top-1/2 left-4 right-4 transform -translate-y-1/2'
+        return 'transform -translate-x-1/2 -translate-y-1/2'
       default:
-        return 'top-1/2 left-4 right-4 transform -translate-y-1/2'
+        return 'transform -translate-x-1/2 -translate-y-1/2'
     }
   }
 
@@ -93,7 +93,7 @@ export default function OnboardingOverlay({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center"
         onClick={currentStep === 1 ? onNext : undefined}
         style={{
           // Allow clicks through to search bar during step 2
@@ -121,6 +121,8 @@ export default function OnboardingOverlay({
           style={{
             // Ensure tooltip card is always clickable
             pointerEvents: 'auto',
+            width: 'calc(100% - 2rem)',
+            maxWidth: '28rem',
           }}
         >
           <div className="bg-white rounded-game p-6 shadow-2xl border-2 border-game-primary">
