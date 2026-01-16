@@ -45,10 +45,13 @@ body {
   }
 
   .btn-game-secondary {
-    @apply font-body text-sm font-semibold;
-    @apply h-10 px-4 rounded-lg;
-    @apply bg-transparent text-gray-500;
-    @apply hover:bg-gray-100 transition-colors;
+    @apply font-display text-xl font-semibold;
+    @apply h-16 px-5 rounded-game;
+    @apply bg-gradient-to-br from-red-500 to-red-700;
+    @apply text-gray-300 shadow-lg;
+    @apply transition-all duration-200;
+    @apply hover:shadow-red-500/50 hover:-translate-y-0.5;
+    @apply active:scale-95;
   }
 }
 
