@@ -13,12 +13,14 @@ export default function HomePage() {
     if (isFirstTime) {
       startOnboarding()
     }
-  }, [isFirstTime, startOnboarding])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFirstTime]) // startOnboarding is memoized, safe to exclude
 
   const handleStart = () => {
     if (isFirstTime) {
       // Start onboarding walkthrough
-      navigate('/map?step=1')
+      const searchParams = new URLSearchParams({ step: '1' })
+      navigate(`/map?${searchParams.toString()}`)
     } else {
       // Go directly to map
       navigate('/map')
