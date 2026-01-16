@@ -93,7 +93,7 @@ export default function OnboardingOverlay({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center"
+        className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center"
         onClick={currentStep === 1 ? onNext : undefined}
         style={{
           // Allow clicks through to search bar during step 2
@@ -102,7 +102,7 @@ export default function OnboardingOverlay({
       >
         {/* Highlight overlay for specific elements */}
         {highlight === 'search' && (
-          <div className="absolute top-4 left-4 right-4 z-50 flex justify-center">
+          <div className="absolute top-4 left-4 right-4 z-[60] flex justify-center">
             <div className="w-full max-w-xl">
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -120,7 +120,7 @@ export default function OnboardingOverlay({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 20 }}
-          className={`absolute ${getPositionClasses()} z-50`}
+          className={`absolute ${getPositionClasses()} z-[60]`}
           onClick={(e) => e.stopPropagation()}
           style={{
             // Ensure tooltip card is always clickable
