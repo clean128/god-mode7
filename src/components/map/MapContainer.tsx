@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useMapStore } from '../../store/mapStore'
 import { l2Api } from '../../services/l2Api'
 import GameNotification from '../ui/GameNotification'
@@ -322,7 +324,13 @@ export default function MapContainer({ map }: MapContainerProps) {
     }
   }, [map, personPins, businessLocation])
 
-  // Render business location pin
+  // Render business location pin with 3D model
+  const businessPin3DSceneRef = useRef<THREE.Scene | null>(null)
+  const businessPin3DRendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const businessPin3DCameraRef = useRef<THREE.PerspectiveCamera | null>(null)
+  const businessPin3DModelRef = useRef<THREE.Group | null>(null)
+  const businessPin3DAnimationRef = useRef<number | null>(null)
+
   useEffect(() => {
     if (!map || !businessLocation) {
       // Remove business marker if no location
@@ -330,32 +338,143 @@ export default function MapContainer({ map }: MapContainerProps) {
         businessMarkerRef.current.remove()
         businessMarkerRef.current = null
       }
+      // Cleanup 3D resources
+      if (businessPin3DAnimationRef.current) {
+        cancelAnimationFrame(businessPin3DAnimationRef.current)
+      }
+      if (businessPin3DRendererRef.current) {
+        businessPin3DRendererRef.current.dispose()
+      }
       return
     }
 
     // Remove existing business marker
     if (businessMarkerRef.current) {
       businessMarkerRef.current.remove()
+      businessMarkerRef.current = null
     }
 
-    // Create business location pin (distinct from person pins)
+    // Create container for 3D pin
     const el = document.createElement('div')
-    el.className = 'business-pin'
-    el.style.width = '48px'
-    el.style.height = '48px'
-    el.style.borderRadius = '50%'
-    el.style.background = 'radial-gradient(circle, #A855F7 0%, #7C3AED 100%)'
-    el.style.border = '4px solid white'
+    el.className = 'business-pin-3d'
+    el.style.width = '80px'
+    el.style.height = '80px'
     el.style.cursor = 'pointer'
-    el.style.boxShadow = '0 6px 20px rgba(168, 85, 247, 0.5)'
-    el.style.display = 'flex'
-    el.style.alignItems = 'center'
-    el.style.justifyContent = 'center'
-    el.style.fontSize = '24px'
     el.style.zIndex = '10'
-    el.innerHTML = '📍'
+    el.style.pointerEvents = 'auto'
 
-    // Add click handler to show business info
+    // Set up Three.js scene for 3D pin
+    const width = 80
+    const height = 80
+    const scene = new THREE.Scene()
+    businessPin3DSceneRef.current = scene
+
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
+    camera.position.set(0, 0, 3)
+    camera.lookAt(0, 0, 0)
+    businessPin3DCameraRef.current = camera
+
+    const renderer = new THREE.WebGLRenderer({ 
+      alpha: true, 
+      antialias: true,
+      preserveDrawingBuffer: true
+    })
+    renderer.setSize(width, height)
+    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setClearColor(0x000000, 0)
+    el.appendChild(renderer.domElement)
+    businessPin3DRendererRef.current = renderer
+
+    // Add lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
+    scene.add(ambientLight)
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6)
+    directionalLight.position.set(5, 5, 5)
+    scene.add(directionalLight)
+
+    // Load GLB model
+    const loader = new GLTFLoader()
+    loader.load(
+      '/models/map_pin_location_pin.glb',
+      (gltf) => {
+        const model = gltf.scene.clone()
+        
+        // Center and scale the model
+        const box = new THREE.Box3().setFromObject(model)
+        const center = box.getCenter(new THREE.Vector3())
+        const size = box.getSize(new THREE.Vector3())
+        
+        // Center the model
+        model.position.x = -center.x
+        model.position.y = -center.y
+        model.position.z = -center.z
+        
+        // Scale to fit nicely in view
+        const maxDim = Math.max(size.x, size.y, size.z)
+        const scale = 1.5 / maxDim
+        model.scale.multiplyScalar(scale)
+        
+        // Rotate if needed (adjust rotation based on model orientation)
+        // model.rotation.x = Math.PI // Uncomment if pin is upside down
+        
+        scene.add(model)
+        businessPin3DModelRef.current = model
+
+        // Animation loop
+        const animate = () => {
+          if (!businessPin3DModelRef.current || !renderer || !camera) return
+          
+          businessPin3DAnimationRef.current = requestAnimationFrame(animate)
+          
+          // Optional: Add slight rotation animation
+          // businessPin3DModelRef.current.rotation.y += 0.01
+          
+          renderer.render(scene, camera)
+        }
+        
+        animate()
+
+        // Create marker with 3D pin
+        const marker = new mapboxgl.Marker({ 
+          element: el,
+          anchor: 'bottom'
+        })
+          .setLngLat(businessLocation.coordinates)
+          .addTo(map)
+
+        businessMarkerRef.current = marker
+
+        // Center map on business location
+        map.flyTo({
+          center: businessLocation.coordinates,
+          zoom: 14,
+          duration: 2000,
+        })
+      },
+      (progress) => {
+        console.log('Loading 3D pin model:', (progress.loaded / progress.total) * 100 + '%')
+      },
+      (error) => {
+        console.error('Error loading 3D pin model:', error)
+        // Fallback to simple pin if 3D model fails to load
+        const fallbackEl = document.createElement('div')
+        fallbackEl.innerHTML = '📍'
+        fallbackEl.style.fontSize = '32px'
+        fallbackEl.style.cursor = 'pointer'
+        
+        const marker = new mapboxgl.Marker({ 
+          element: fallbackEl,
+          anchor: 'bottom'
+        })
+          .setLngLat(businessLocation.coordinates)
+          .addTo(map)
+
+        businessMarkerRef.current = marker
+      }
+    )
+
+    // Add click handler
     el.addEventListener('click', () => {
       map.flyTo({
         center: businessLocation.coordinates,
@@ -364,23 +483,28 @@ export default function MapContainer({ map }: MapContainerProps) {
       })
     })
 
-    const marker = new mapboxgl.Marker({ element: el })
-      .setLngLat(businessLocation.coordinates)
-      .addTo(map)
-
-    businessMarkerRef.current = marker
-
-    // Center map on business location
-    map.flyTo({
-      center: businessLocation.coordinates,
-      zoom: 14,
-      duration: 2000,
-    })
-
     return () => {
       if (businessMarkerRef.current) {
         businessMarkerRef.current.remove()
         businessMarkerRef.current = null
+      }
+      if (businessPin3DAnimationRef.current) {
+        cancelAnimationFrame(businessPin3DAnimationRef.current)
+      }
+      if (businessPin3DRendererRef.current) {
+        businessPin3DRendererRef.current.dispose()
+      }
+      if (businessPin3DModelRef.current) {
+        businessPin3DModelRef.current.traverse((object) => {
+          if (object instanceof THREE.Mesh) {
+            object.geometry.dispose()
+            if (Array.isArray(object.material)) {
+              object.material.forEach(material => material.dispose())
+            } else {
+              object.material.dispose()
+            }
+          }
+        })
       }
     }
   }, [map, businessLocation])
