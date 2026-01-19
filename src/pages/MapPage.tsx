@@ -97,9 +97,24 @@ export default function MapPage() {
             {/* Map Container */}
             <div
                 ref={mapContainerRef}
-                className="absolute inset-0"
-                style={{ width: '100%', height: '100%' }}
+                className="absolute inset-0 transition-all duration-300"
+                style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    filter: isLoading ? 'blur(4px)' : 'none',
+                    pointerEvents: isLoading ? 'none' : 'auto'
+                }}
             />
+            
+            {/* Loading overlay with blur effect */}
+            {isLoading && mapInstance && (
+                <div 
+                    className="absolute inset-0 bg-white bg-opacity-30 z-40 transition-opacity duration-300"
+                    style={{ 
+                        backdropFilter: 'blur(4px)',
+                    }}
+                />
+            )}
 
             {mapInstance && (
                 <>
