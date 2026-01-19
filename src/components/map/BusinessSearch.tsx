@@ -13,7 +13,7 @@ export default function BusinessSearch() {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isSelectingRef = useRef(false) // Flag to prevent autocomplete during selection
-  const { setBusinessLocation, setLoading } = useMapStore()
+  const { setBusinessLocation, setLoading, clearPins } = useMapStore()
 
   // Autocomplete search as user types (debounced)
   useEffect(() => {
@@ -198,6 +198,33 @@ export default function BusinessSearch() {
     setLoading(true)
   }
 
+  const handleClear = () => {
+    // Clear query
+    setQuery('')
+    
+    // Clear results and dropdown
+    setResults([])
+    setShowDropdown(false)
+    setSelectedIndex(-1)
+    setError(null)
+    setIsSearching(false)
+    
+    // Clear any pending search
+    if (searchTimeoutRef.current) {
+      window.clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = null
+    }
+    
+    // Clear business location and pins
+    setBusinessLocation(null)
+    clearPins()
+    
+    // Focus back on input
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }
+
   return (
     <div className="relative" style={{ pointerEvents: 'auto' }}>
       <form onSubmit={handleManualSearch} className="relative" onClick={(e) => e.stopPropagation()}>
@@ -235,6 +262,14 @@ export default function BusinessSearch() {
             'Search'
           )}
         </button> */}
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={!query.trim()}
+          className="absolute right-2 top-2 bottom-2 px-8 rounded-game bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 text-white font-display font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all active:scale-95"
+        >
+          Clear
+        </button>
       </form>
 
       {/* Error Message */}
