@@ -170,7 +170,8 @@ export default function MapContainer({ map }: MapContainerProps) {
           setShowNotification(true)
         } else {
           setPersonPins([])
-          console.warn('⚠️ No people found within 30km with valid coordinates')
+          setNotificationMessage(pins.length.toString())
+          setShowNotification(true)
         }
       } catch (error: any) {
         console.error('Error loading people data:', error)
