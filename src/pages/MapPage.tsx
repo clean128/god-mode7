@@ -49,7 +49,18 @@ export default function MapPage() {
 
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/outdoors-v12',
+            style: 'mapbox://styles/mapbox/standard',
+            config: {
+                basemap: {
+                    lightPreset: "dusk",
+                    showRoadLabels: false,
+                    showTransitLabels: false,
+                    font: "Frank Ruhl Libre",
+                    show3dFacades: true,
+                    showLandmarkIcons: true,
+                    colorBuildings: "#d0c7b3"
+                }
+            },
             center: [-74.006, 40.7128], // Center of USA
             zoom: 14,
             antialias: true,
@@ -63,35 +74,6 @@ export default function MapPage() {
             setTimeout(() => {
                 map.resize()
             }, 100)
-            
-            // Apply colorful customizations to make map more game-like
-            try {
-                // Make the map more colorful
-                if (map.getLayer('landcover')) {
-                    map.setPaintProperty('landcover', 'fill-color', [
-                        'match',
-                        ['get', 'class'],
-                        'grass', '#A8E6CF',
-                        'crop', '#FFD93D',
-                        'sand', '#FFD93D',
-                        'scrub', '#9BCF53',
-                        'tundra', '#C5E8B7',
-                        '#E8F5E9'
-                    ])
-                }
-                
-                // Make water more vibrant
-                if (map.getLayer('water')) {
-                    map.setPaintProperty('water', 'fill-color', '#4A90E2')
-                }
-                
-                // Make parks more colorful
-                if (map.getLayer('park')) {
-                    map.setPaintProperty('park', 'fill-color', '#00FF88')
-                }
-            } catch (e) {
-                console.log('Map style customization skipped:', e)
-            }
         })
 
         map.on('error', (e) => {
