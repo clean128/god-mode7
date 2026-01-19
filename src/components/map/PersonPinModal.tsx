@@ -189,6 +189,7 @@ export default function PersonPinModal({ person, onClose }: PersonPinModalProps)
           <div className="flex justify-between items-start mb-4 sticky top-0 bg-white pt-2 pb-2 z-10">
             <div>
               <h2 className="font-display text-2xl text-gray-900">👤 {name}</h2>
+              <p className="text-sm text-purple-600 font-semibold mt-1">Potential Customer</p>
               {(age !== 'Not available' || gender !== 'Not available') && (
                 <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                   {age !== 'Not available' && <span>Age: {age}</span>}
@@ -381,13 +382,13 @@ export default function PersonPinModal({ person, onClose }: PersonPinModalProps)
 
             {/* Action Button */}
             <button
-              className="btn-game-primary w-full mt-6"
+              className="btn-game-primary w-full mt-6 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500"
               onClick={() => {
                 // TODO: Add to selection
                 onClose()
               }}
             >
-              Select Person ✓
+              View Details ✓
             </button>
           </div>
         </div>

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { searchBusiness } from '../../services/mapboxApi'
 import { useMapStore } from '../../store/mapStore'
-import { useOnboarding } from '../../contexts/OnboardingContext'
 
 export default function BusinessSearch() {
   const [query, setQuery] = useState('')
@@ -9,7 +8,6 @@ export default function BusinessSearch() {
   const [isSearching, setIsSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { setBusinessLocation, setLoading } = useMapStore()
-  const { currentStep, completeStep, unlockAchievement, nextStep } = useOnboarding()
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,15 +62,6 @@ export default function BusinessSearch() {
     setResults([])
     setQuery(result.place_name)
     setLoading(true)
-
-    // Onboarding: Complete step 2
-    if (currentStep === 2) {
-      completeStep(2)
-      unlockAchievement('Business Finder!')
-      setTimeout(() => {
-        nextStep()
-      }, 1000)
-    }
   }
 
   return (
@@ -82,22 +71,16 @@ export default function BusinessSearch() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="🔍 Search your business..."
-          className="w-full h-14 px-6 pr-14 rounded-game border-2 border-gray-200 focus:border-game-primary focus:outline-none font-body text-lg shadow-lg"
+          placeholder="🔍 Type your business name here..."
+          className="w-full h-16 px-6 pr-36 rounded-game border-4 border-purple-400 focus:border-pink-500 focus:outline-none font-body text-xl shadow-2xl bg-white"
           style={{
-            boxShadow: currentStep === 2 ? '0 0 20px rgba(0, 217, 255, 0.5)' : undefined,
+            boxShadow: '0 8px 32px rgba(168, 85, 247, 0.4)',
           }}
         />
         <button
           type="submit"
           disabled={isSearching || !query.trim()}
-          className="absolute right-2 top-2 bottom-2 px-6 rounded-game bg-gradient-to-br from-game-primary to-game-primary-dark text-white font-display font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-game-blue hover:shadow-game-glow transition-all active:scale-95"
-          onClick={(e) => {
-            if (!query.trim()) {
-              e.preventDefault()
-              return
-            }
-          }}
+          className="absolute right-2 top-2 bottom-2 px-8 rounded-game bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 text-white font-display font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all active:scale-95"
         >
           {isSearching ? (
             <span className="flex items-center gap-2">
@@ -112,7 +95,7 @@ export default function BusinessSearch() {
 
       {/* Error Message */}
       {error && (
-        <div className="absolute top-full left-0 right-0 mt-2 p-4 bg-red-50 border-2 border-red-400 rounded-game shadow-lg z-20">
+        <div className="absolute top-full left-0 right-0 mt-2 p-4 bg-red-100 border-4 border-red-500 rounded-game shadow-xl z-20">
           <div className="flex items-start gap-3">
             <span className="text-2xl">⚠️</span>
             <div>
@@ -125,14 +108,14 @@ export default function BusinessSearch() {
 
       {/* Search Results */}
       {results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-game shadow-xl border border-gray-200 max-h-64 overflow-y-auto z-20">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-game shadow-2xl border-4 border-purple-300 max-h-64 overflow-y-auto z-20">
           {results.map((result, index) => (
             <button
               key={index}
               onClick={() => handleSelectBusiness(result)}
-              className="w-full text-left px-6 py-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+              className="w-full text-left px-6 py-4 hover:bg-purple-50 transition-colors border-b-2 border-purple-100 last:border-b-0"
             >
-              <div className="font-body font-semibold text-gray-900">{result.place_name}</div>
+              <div className="font-body font-semibold text-gray-900 text-lg">{result.place_name}</div>
               {result.context && (
                 <div className="font-body text-sm text-gray-500 mt-1">
                   {result.context.map((ctx: any) => ctx.text).join(', ')}
@@ -140,19 +123,6 @@ export default function BusinessSearch() {
               )}
             </button>
           ))}
-        </div>
-      )}
-
-      {/* Onboarding Tooltip for Step 2 */}
-      {currentStep === 2 && !query.trim() && (
-        <div className="absolute top-full left-0 right-0 mt-4 p-4 bg-yellow-100 border-2 border-yellow-400 rounded-game shadow-lg z-30">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">👆</span>
-            <div>
-              <div className="font-body font-bold text-gray-900 mb-1">Type your business name</div>
-              <div className="font-body text-sm text-gray-700">Then click Search to find it on the map</div>
-            </div>
-          </div>
         </div>
       )}
     </div>

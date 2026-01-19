@@ -204,23 +204,40 @@ export default function MapContainer({ map }: MapContainerProps) {
     })
     markersRef.current = []
 
-    // Display all individual pins (no clustering)
-    personPins.forEach((item) => {
-        // Render individual pin - Game-style enhanced
+        // Display all individual people markers (no clustering)
+    personPins.forEach((item, index) => {
+        // Render individual person marker - Colorful game-style
+        const colors = [
+            { bg: 'radial-gradient(circle, #FF6B9D 0%, #FF1744 100%)', shadow: 'rgba(255, 107, 157, 0.6)' },
+            { bg: 'radial-gradient(circle, #FFD93D 0%, #FFA000 100%)', shadow: 'rgba(255, 217, 61, 0.6)' },
+            { bg: 'radial-gradient(circle, #A855F7 0%, #7C3AED 100%)', shadow: 'rgba(168, 85, 247, 0.6)' },
+            { bg: 'radial-gradient(circle, #00D9FF 0%, #4A90E2 100%)', shadow: 'rgba(0, 217, 255, 0.6)' },
+            { bg: 'radial-gradient(circle, #00FF88 0%, #00CC6A 100%)', shadow: 'rgba(0, 255, 136, 0.6)' },
+            { bg: 'radial-gradient(circle, #FF6B35 0%, #E64A19 100%)', shadow: 'rgba(255, 107, 53, 0.6)' },
+        ]
+        const colorScheme = colors[index % colors.length]
+        
         const el = document.createElement('div')
         el.className = 'person-pin'
         el.style.width = '48px'
         el.style.height = '48px'
         el.style.borderRadius = '50%'
-        el.style.background = 'radial-gradient(circle, #00D9FF 0%, #4A90E2 50%, #357ABD 100%)'
+        el.style.background = colorScheme.bg
         el.style.border = '4px solid white'
-        el.style.boxShadow = '0 6px 20px rgba(0, 217, 255, 0.6), 0 0 30px rgba(0, 217, 255, 0.3)'
+        el.style.boxShadow = `0 6px 20px ${colorScheme.shadow}, 0 0 30px ${colorScheme.shadow}`
         el.style.display = 'flex'
         el.style.alignItems = 'center'
         el.style.justifyContent = 'center'
         el.style.fontSize = '28px'
         el.style.cursor = 'pointer'
+        el.style.transition = 'transform 0.2s ease'
         el.innerHTML = '👤'
+        // el.addEventListener('mouseenter', () => {
+        //   el.style.transform = 'scale(1.2)'
+        // })
+        // el.addEventListener('mouseleave', () => {
+        //   el.style.transform = 'scale(1)'
+        // })
 
         const marker = new mapboxgl.Marker({ 
           element: el,
@@ -321,21 +338,22 @@ export default function MapContainer({ map }: MapContainerProps) {
       businessMarkerRef.current.remove()
     }
 
-    // Create business location pin (distinct from person pins)
+    // Create business location marker (distinct from people markers)
     const el = document.createElement('div')
     el.className = 'business-pin'
     el.style.width = '48px'
     el.style.height = '48px'
     el.style.borderRadius = '50%'
-    el.style.background = 'radial-gradient(circle, #A855F7 0%, #7C3AED 100%)'
+    el.style.background = 'radial-gradient(circle, #FFD93D 0%, #FFA000 100%)'
     el.style.border = '4px solid white'
     el.style.cursor = 'pointer'
-    el.style.boxShadow = '0 6px 20px rgba(168, 85, 247, 0.5)'
+    el.style.boxShadow = '0 6px 20px rgba(255, 217, 61, 0.7), 0 0 40px rgba(255, 217, 61, 0.4)'
     el.style.display = 'flex'
     el.style.alignItems = 'center'
     el.style.justifyContent = 'center'
     el.style.fontSize = '24px'
     el.style.zIndex = '10'
+    el.style.animation = 'pulse 2s infinite'
     el.innerHTML = '📍'
 
     // Add click handler to show business info

@@ -85,3 +85,14 @@ body {
   background: #00D9FF;
 }
 
+/* Pulse animation for business marker */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 10px 30px rgba(255, 217, 61, 0.7), 0 0 50px rgba(255, 217, 61, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(255, 217, 61, 0.9), 0 0 60px rgba(255, 217, 61, 0.6);
+  }
+}

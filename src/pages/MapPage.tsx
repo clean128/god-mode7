@@ -1,21 +1,15 @@
 import { useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useMapStore } from '../store/mapStore'
-import { useOnboarding } from '../contexts/OnboardingContext'
 import MapContainer from '../components/map/MapContainer'
 import BusinessSearch from '../components/map/BusinessSearch'
 import PersonPinModal from '../components/map/PersonPinModal'
-import OnboardingOverlay from '../components/onboarding/OnboardingOverlay'
-import ProgressIndicator from '../components/onboarding/ProgressIndicator'
 import LoadingStatusBar from '../components/ui/LoadingStatusBar'
 
 export default function MapPage() {
     const mapContainerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<mapboxgl.Map | null>(null) // Local ref to prevent double init
-    const [searchParams] = useSearchParams()
-    const onboardingStep = parseInt(searchParams.get('step') || '0')
 
     const {
         mapInstance,
@@ -24,15 +18,6 @@ export default function MapPage() {
         setSelectedPin,
         isLoading,
     } = useMapStore()
-
-    const {
-        isFirstTime,
-        currentStep,
-        totalSteps,
-        nextStep,
-        completeStep,
-        unlockAchievement,
-    } = useOnboarding()
 
     // Initialize map
     useEffect(() => {
@@ -64,18 +49,7 @@ export default function MapPage() {
 
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/standard',
-            config: {
-                basemap: {
-                    lightPreset: "dusk",
-                    showRoadLabels: false,
-                    showTransitLabels: false,
-                    font: "Frank Ruhl Libre",
-                    show3dFacades: true,
-                    showLandmarkIcons: true,
-                    colorBuildings: "#d0c7b3"
-                }
-            },
+            style: 'mapbox://styles/mapbox/outdoors-v12',
             center: [-74.006, 40.7128], // Center of USA
             zoom: 14,
             antialias: true,
@@ -89,6 +63,35 @@ export default function MapPage() {
             setTimeout(() => {
                 map.resize()
             }, 100)
+            
+            // Apply colorful customizations to make map more game-like
+            try {
+                // Make the map more colorful
+                if (map.getLayer('landcover')) {
+                    map.setPaintProperty('landcover', 'fill-color', [
+                        'match',
+                        ['get', 'class'],
+                        'grass', '#A8E6CF',
+                        'crop', '#FFD93D',
+                        'sand', '#FFD93D',
+                        'scrub', '#9BCF53',
+                        'tundra', '#C5E8B7',
+                        '#E8F5E9'
+                    ])
+                }
+                
+                // Make water more vibrant
+                if (map.getLayer('water')) {
+                    map.setPaintProperty('water', 'fill-color', '#4A90E2')
+                }
+                
+                // Make parks more colorful
+                if (map.getLayer('park')) {
+                    map.setPaintProperty('park', 'fill-color', '#00FF88')
+                }
+            } catch (e) {
+                console.log('Map style customization skipped:', e)
+            }
         })
 
         map.on('error', (e) => {
@@ -106,12 +109,6 @@ export default function MapPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []) // Empty array - only run once on mount
 
-    // Handle onboarding step
-    useEffect(() => {
-        if (onboardingStep > 0 && isFirstTime) {
-            // Onboarding is handled by OnboardingOverlay
-        }
-    }, [onboardingStep, isFirstTime])
 
     return (
         <div className="relative w-full h-screen overflow-hidden">
@@ -129,37 +126,18 @@ export default function MapPage() {
                     {/* Loading Status Bar - Show when fetching people data */}
                     <LoadingStatusBar isVisible={isLoading} />
 
-                    {/* Business Search - Must be above overlay (z-40) */}
+                    {/* Business Search */}
                     <div className="absolute top-4 left-4 right-4 z-50 flex justify-center">
                         <div className="w-full max-w-xl">
                             <BusinessSearch />
                         </div>
                     </div>
 
-                    {/* Progress Indicator (during onboarding) */}
-                    {isFirstTime && currentStep > 0 && (
-                        <div className="absolute top-20 left-4 right-4 z-10 flex justify-center">
-                            <div className="w-full max-w-xl">
-                                <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Person Pin Modal */}
+                    {/* Person Modal */}
                     {selectedPin && (
                         <PersonPinModal
                             person={selectedPin.data}
                             onClose={() => setSelectedPin(null)}
-                        />
-                    )}
-
-                    {/* Onboarding Overlay */}
-                    {isFirstTime && (
-                        <OnboardingOverlay
-                            currentStep={currentStep}
-                            onNext={nextStep}
-                            onCompleteStep={completeStep}
-                            onUnlockAchievement={unlockAchievement}
                         />
                     )}
                 </>

@@ -123,11 +123,11 @@ export default function GameNotification({ message, isVisible, onClose, duration
 
   useEffect(() => {
     if (!isVisible) return
-    
+
     const timer = setTimeout(() => {
       onClose()
     }, duration)
-    
+
     return () => {
       clearTimeout(timer)
     }
@@ -140,25 +140,25 @@ export default function GameNotification({ message, isVisible, onClose, duration
           initial={{ opacity: 0, x: 100, scale: 0.8, rotate: -5 }}
           animate={{ opacity: 1, x: 0, scale: 1, rotate: 0 }}
           exit={{ opacity: 0, x: 100, scale: 0.9, rotate: 5 }}
-          transition={{ 
-            type: 'spring', 
-            damping: 15, 
+          transition={{
+            type: 'spring',
+            damping: 15,
             stiffness: 300,
             rotate: { type: 'spring', damping: 20 }
           }}
           className="fixed top-20 right-4 z-[60]"
         >
-          <div 
+          <div
             onClick={onClose}
             className="bg-gradient-to-br from-game-primary to-game-primary-dark rounded-game px-5 py-3 shadow-2xl border-3 border-white flex items-center gap-3 min-w-[120px] max-w-xs relative overflow-hidden cursor-pointer"
           >
             {/* Three.js particle background */}
-            <div 
+            <div
               ref={containerRef}
               className="absolute inset-0 pointer-events-none opacity-30"
               style={{ width: '150px', height: '80px', position: 'absolute', right: '-40px', top: '-15px' }}
             />
-            
+
             <span className="text-2xl animate-bounce relative z-10">👥</span>
             <div className="flex-1 relative z-10">
               <p className="font-display text-xl font-bold text-white uppercase tracking-wide">
