@@ -9,7 +9,7 @@ interface GameNotificationProps {
   duration?: number
 }
 
-export default function GameNotification({ message, isVisible, onClose, duration = 3000 }: GameNotificationProps) {
+export default function GameNotification({ message, isVisible, onClose, duration = 4000 }: GameNotificationProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<THREE.Scene | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
@@ -164,7 +164,7 @@ export default function GameNotification({ message, isVisible, onClose, duration
               <p className="font-display text-xl font-bold text-white uppercase tracking-wide">
                 {message}
               </p>
-              <p className="font-body text-xs text-white/90 mt-0.5">people found near the business</p>
+              <p className="font-body text-sm text-white/90 mt-0.5">people found near the business</p>
             </div>
             <button
               onClick={(e) => {
