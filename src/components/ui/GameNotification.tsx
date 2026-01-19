@@ -164,7 +164,7 @@ export default function GameNotification({ message, isVisible, onClose, duration
               <p className="font-display text-xl font-bold text-white uppercase tracking-wide">
                 {message}
               </p>
-              <p className="font-body text-xs text-white/90 mt-0.5">people found within 30km</p>
+              <p className="font-body text-xs text-white/90 mt-0.5">people found near the business</p>
             </div>
             <button
               onClick={(e) => {
