@@ -451,7 +451,7 @@ export default function MapContainer({ map }: MapContainerProps) {
         // Center map on business location
         map.flyTo({
           center: businessLocation.coordinates,
-          zoom: 14,
+          zoom: 16,
           duration: 2000,
         })
       },
