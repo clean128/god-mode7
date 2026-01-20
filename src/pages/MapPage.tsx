@@ -49,11 +49,11 @@ export default function MapPage() {
 
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/streets-v12', // Use streets style
+            style: 'mapbox://styles/godmode7/cmkmlfs35000z01r15l1dghfz', // Use streets style
             center: [-74.006, 40.7128], // Center of USA
-            zoom: 16, // Closer zoom for ground-level feel
+            zoom: 17, // Closer zoom for ground-level feel
             pitch: 60, // Angled view (0 = top-down, 60 = angled/immersive)
-            bearing: -20, // Slight rotation for dynamic perspective
+            bearing: -12, // Slight rotation for dynamic perspective
             antialias: true,
         })
 
@@ -73,79 +73,6 @@ export default function MapPage() {
                     beforeId = layers[i].id
                     break
                 }
-            }
-            
-            // Check if 3D building layer already exists
-            const existingBuildingLayer = map.getLayer('3d-buildings')
-            if (!existingBuildingLayer) {
-                // Add 3D building layer using Mapbox's building data
-                // The composite source contains building data in streets-v12
-                try {
-                    map.addLayer({
-                        'id': '3d-buildings',
-                        'source': 'composite',
-                        'source-layer': 'building',
-                        'filter': ['==', 'extrude', 'true'],
-                        'type': 'fill-extrusion',
-                        'minzoom': 15,
-                        'paint': {
-                            // Ultra colorful video game-style buildings - more vibrant colors with height-based variation
-                            'fill-extrusion-color': [
-                                'case',
-                                ['>', ['get', 'height'], 60], '#FF00FF', // Very tall - Magenta
-                                ['>', ['get', 'height'], 50], '#A855F7', // Tall - Purple
-                                ['>', ['get', 'height'], 40], '#FF1493', // Tall-medium - Deep Pink
-                                ['>', ['get', 'height'], 30], '#FF6B9D', // Medium-tall - Pink
-                                ['>', ['get', 'height'], 25], '#00FFFF', // Medium-high - Aqua
-                                ['>', ['get', 'height'], 20], '#00D9FF', // Medium - Cyan
-                                ['>', ['get', 'height'], 15], '#1E90FF', // Medium-low - Dodger Blue
-                                ['>', ['get', 'height'], 12], '#FFD93D', // Short-medium - Yellow
-                                ['>', ['get', 'height'], 8], '#FFA500', // Short-medium - Orange
-                                ['>', ['get', 'height'], 6], '#00FF88', // Short - Green
-                                ['>', ['get', 'height'], 4], '#32CD32', // Short - Lime Green
-                                ['>', ['get', 'height'], 2], '#FF6B35', // Very short - Orange Red
-                                '#FF69B4' // Tiny - Hot Pink
-                            ],
-                            'fill-extrusion-height': [
-                                'interpolate',
-                                ['linear'],
-                                ['zoom'],
-                                15,
-                                0,
-                                15.05,
-                                ['get', 'height']
-                            ],
-                            'fill-extrusion-base': [
-                                'interpolate',
-                                ['linear'],
-                                ['zoom'],
-                                15,
-                                0,
-                                15.05,
-                                ['get', 'min_height']
-                            ],
-                            'fill-extrusion-opacity': 1.0 // Fully opaque for maximum vibrancy
-                        }
-                    }, beforeId)
-                    
-                    console.log('✅ 3D building layer added')
-                } catch (error) {
-                    console.error('Error adding 3D building layer:', error)
-                    // Try alternative approach if composite source doesn't work
-                    console.warn('Attempting alternative 3D building setup...')
-                }
-            } else {
-                // Update existing layer with colorful video game-style colors
-                map.setPaintProperty('3d-buildings', 'fill-extrusion-color', [
-                    'case',
-                    ['>', ['get', 'height'], 50], '#A855F7', // Tall buildings - Purple
-                    ['>', ['get', 'height'], 30], '#FF6B9D', // Medium-tall - Pink
-                    ['>', ['get', 'height'], 15], '#00D9FF', // Medium - Cyan
-                    ['>', ['get', 'height'], 8], '#FFD93D', // Short-medium - Yellow
-                    ['>', ['get', 'height'], 4], '#00FF88', // Short - Green
-                    '#FF6B35' // Very short - Orange
-                ])
-                console.log('✅ 3D building layer found and updated with colorful colors')
             }
             
             // Force resize to ensure map renders correctly
