@@ -61,24 +61,7 @@ export default function MapPage() {
 
         map.on('load', () => {
             setMapInstance(map)
-            
-            // Add 3D buildings manually using fill-extrusion
-            // Find the last symbol layer to insert before it (so buildings appear below labels)
-            const layers = map.getStyle().layers
-            let beforeId: string | undefined
-            
-            // Find a good insertion point (before any symbol/label layers)
-            for (let i = layers.length - 1; i >= 0; i--) {
-                if (layers[i].type === 'symbol') {
-                    beforeId = layers[i].id
-                    break
-                }
-            }
-            
-            // Force resize to ensure map renders correctly
-            setTimeout(() => {
-                map.resize()
-            }, 100)
+            setTimeout(() => map.resize(), 100)
         })
 
         map.on('error', (e) => {
