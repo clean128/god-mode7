@@ -309,7 +309,9 @@ export default function MapContainer({ map }: MapContainerProps) {
       
       map.fitBounds(bounds, {
         padding: 100,
-        maxZoom: 15,
+        maxZoom: 16,
+        pitch: 60, // Maintain angled view
+        bearing: -20, // Maintain rotation
       })
       
       // Mark that we've fitted bounds for this pin set
