@@ -390,9 +390,10 @@ export default function MapContainer({ map }: MapContainerProps) {
 
         businessMarkerRef.current = marker
 
-        // Center map on business (keep current zoom)
+        // Center map on business at zoom 17
         map.flyTo({
           center: businessLocation.coordinates,
+          zoom: 18,
           duration: 2000,
         })
       },
