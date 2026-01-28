@@ -29,22 +29,6 @@ export default function MapContainer({ map }: MapContainerProps) {
     setShowNotification(false)
   }, [])
 
-  // Helper function to calculate distance between two coordinates in meters
-  const getDistance = (coord1: [number, number], coord2: [number, number]): number => {
-    const R = 6371000 // Earth radius in meters
-    const lat1 = coord1[1] * Math.PI / 180
-    const lat2 = coord2[1] * Math.PI / 180
-    const deltaLat = (coord2[1] - coord1[1]) * Math.PI / 180
-    const deltaLng = (coord2[0] - coord1[0]) * Math.PI / 180
-
-    const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-              Math.cos(lat1) * Math.cos(lat2) *
-              Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
-    return R * c
-  }
-
   // Load person data when business location is set
   useEffect(() => {
     if (!businessLocation || !map) {
@@ -59,7 +43,7 @@ export default function MapContainer({ map }: MapContainerProps) {
 
       try {
         const [lng, lat] = businessLocation.coordinates
-        const radiusMeters = 30000 // 30km in meters
+        const radiusMeters = 1// 30km in meters
         
         // Search for people within 30km radius from business location
         console.log('🔍 Searching for people within 30km of business:', { lat, lng, radius: radiusMeters })
@@ -107,21 +91,19 @@ export default function MapContainer({ map }: MapContainerProps) {
           console.log('📋 Sample person fields:', Object.keys(firstPerson).slice(0, 20))
         }
 
-        // Transform to pins and filter by distance
-        const businessCoords: [number, number] = [lng, lat]
-        
+        // Transform to pins (API already returns people within radius)
         const pins = people
           .map((person: any) => {
             // Try multiple possible coordinate field names
-            let personLat = person.Residence_Addresses_Latitude || 
-                           person.Latitude || 
+            let personLat = person.Residence_Addresses_Latitude ||
+                           person.Latitude ||
                            person.latitude ||
                            person.LAT ||
                            person.Residence_Latitude ||
                            person.Address_Latitude
-            
-            let personLng = person.Residence_Addresses_Longitude || 
-                           person.Longitude || 
+
+            let personLng = person.Residence_Addresses_Longitude ||
+                           person.Longitude ||
                            person.longitude ||
                            person.LONG ||
                            person.LON ||
@@ -136,22 +118,16 @@ export default function MapContainer({ map }: MapContainerProps) {
               personLng = person.Residence_Addresses.Longitude || person.Residence_Addresses.longitude
             }
 
-            const hasValidCoords = personLat != null && personLng != null && 
-                                 !isNaN(parseFloat(personLat)) && 
+            const hasValidCoords = personLat != null && personLng != null &&
+                                 !isNaN(parseFloat(personLat)) &&
                                  !isNaN(parseFloat(personLng))
-            
+
             if (!hasValidCoords) {
               return null
             }
-            
+
             const personCoords: [number, number] = [parseFloat(personLng), parseFloat(personLat)]
-            const distance = getDistance(businessCoords, personCoords)
-            
-            // Only include people within 30km
-            if (distance > radiusMeters) {
-              return null
-            }
-            
+
             return {
               id: person.LALVOTERID || `person-${Math.random()}`,
               coordinates: personCoords,
@@ -160,9 +136,9 @@ export default function MapContainer({ map }: MapContainerProps) {
           })
           .filter((pin): pin is NonNullable<typeof pin> => pin !== null)
 
-        console.log(`✅ Created ${pins.length} pins from ${people.length} people (${people.length - pins.length} filtered out - ${people.length - pins.length} outside 30km or missing coordinates)`)
+        console.log(`✅ Created ${pins.length} pins from ${people.length} people (${people.length - pins.length} excluded — missing coordinates)`)
         
-        // Only set pins if we have valid pins within 30km
+        // Set pins when we have valid results
         if (pins.length > 0) {
           setPersonPins(pins)
           // Show game-style notification
