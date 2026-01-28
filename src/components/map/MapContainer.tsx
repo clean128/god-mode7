@@ -13,8 +13,6 @@ interface MapContainerProps {
 export default function MapContainer({ map }: MapContainerProps) {
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const businessMarkerRef = useRef<mapboxgl.Marker | null>(null)
-  const hasFittedBoundsRef = useRef(false)
-  const lastPersonPinsCountRef = useRef(0)
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const {
@@ -73,6 +71,8 @@ export default function MapContainer({ map }: MapContainerProps) {
 
         if (people.length === 0) {
           console.warn('⚠️ No people found within 30km radius')
+          setShowNotification(true)
+          setNotificationMessage(people.length.toString())
           setPersonPins([])
           setLoading(false)
           return
@@ -160,21 +160,10 @@ export default function MapContainer({ map }: MapContainerProps) {
     loadPeopleData()
   }, [businessLocation, map, setPersonPins, setLoading, setError])
 
-  // Render person pins on map with clustering
+  // Render person pins on map
   useEffect(() => {
     if (!map || personPins.length === 0) {
-      // Reset fit bounds flag when pins are cleared
-      hasFittedBoundsRef.current = false
-      lastPersonPinsCountRef.current = 0
       return
-    }
-
-    // Check if this is a new set of pins (different count than before)
-    const isNewPinSet = personPins.length !== lastPersonPinsCountRef.current
-    if (isNewPinSet) {
-      // Reset fit bounds flag for new pin set
-      hasFittedBoundsRef.current = false
-      lastPersonPinsCountRef.current = personPins.length
     }
 
     // Clear existing markers
@@ -271,29 +260,6 @@ export default function MapContainer({ map }: MapContainerProps) {
         markersRef.current.push(marker)
     })
 
-    // Fit map to show all pins and business location (only once per new pin set)
-    if (!hasFittedBoundsRef.current && personPins.length > 0 && markersRef.current.length === personPins.length) {
-      const bounds = new mapboxgl.LngLatBounds()
-      
-      // Include business location if available
-      if (businessLocation) {
-        bounds.extend(businessLocation.coordinates)
-      }
-      
-      // Include all person pins
-      personPins.forEach(pin => bounds.extend(pin.coordinates))
-      
-      map.fitBounds(bounds, {
-        padding: 100,
-        maxZoom: 16,
-        pitch: 60, // Maintain angled view
-        bearing: -20, // Maintain rotation
-      })
-      
-      // Mark that we've fitted bounds for this pin set
-      hasFittedBoundsRef.current = true
-    }
-
     return () => {
       // Remove markers
       markersRef.current.forEach(marker => {
@@ -301,7 +267,7 @@ export default function MapContainer({ map }: MapContainerProps) {
       })
       markersRef.current = []
     }
-  }, [map, personPins, businessLocation])
+  }, [map, personPins])
 
   // Render business location pin with 3D model
   const businessPin3DSceneRef = useRef<THREE.Scene | null>(null)
@@ -424,10 +390,9 @@ export default function MapContainer({ map }: MapContainerProps) {
 
         businessMarkerRef.current = marker
 
-        // Center map on business location
+        // Center map on business (keep current zoom)
         map.flyTo({
           center: businessLocation.coordinates,
-          zoom: 16,
           duration: 2000,
         })
       },
@@ -453,11 +418,10 @@ export default function MapContainer({ map }: MapContainerProps) {
       }
     )
 
-    // Add click handler
+    // Add click handler — pan to business, keep zoom
     el.addEventListener('click', () => {
       map.flyTo({
         center: businessLocation.coordinates,
-        zoom: Math.max(map.getZoom(), 15),
         duration: 500,
       })
     })
