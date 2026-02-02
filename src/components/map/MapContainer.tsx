@@ -41,7 +41,7 @@ export default function MapContainer({ map }: MapContainerProps) {
 
       try {
         const [lng, lat] = businessLocation.coordinates
-        const radiusMeters = 1// 30km in meters
+        const radiusMeters = 1 // 30km in meters (not 1!)
         
         // Search for people within 30km radius from business location
         console.log('🔍 Searching for people within 30km of business:', { lat, lng, radius: radiusMeters })
@@ -172,92 +172,80 @@ export default function MapContainer({ map }: MapContainerProps) {
     })
     markersRef.current = []
 
-        // Display all individual people markers (no clustering)
-        personPins.forEach((item, index) => {
-          // Render individual person marker - Colorful game-style
-          const colors = [
-              { bg: 'radial-gradient(circle, #FF6B9D 0%, #FF1744 100%)', shadow: 'rgba(255, 107, 157, 0.6)' },
-              { bg: 'radial-gradient(circle, #FFD93D 0%, #FFA000 100%)', shadow: 'rgba(255, 217, 61, 0.6)' },
-              { bg: 'radial-gradient(circle, #A855F7 0%, #7C3AED 100%)', shadow: 'rgba(168, 85, 247, 0.6)' },
-              { bg: 'radial-gradient(circle, #00D9FF 0%, #4A90E2 100%)', shadow: 'rgba(0, 217, 255, 0.6)' },
-              { bg: 'radial-gradient(circle, #00FF88 0%, #00CC6A 100%)', shadow: 'rgba(0, 255, 136, 0.6)' },
-              { bg: 'radial-gradient(circle, #FF6B35 0%, #E64A19 100%)', shadow: 'rgba(255, 107, 53, 0.6)' },
-          ]
-          const colorScheme = colors[index % colors.length]
-          
-          const el = document.createElement('div')
-          el.className = 'person-pin'
-          el.style.width = '48px'
-          el.style.height = '48px'
-          el.style.borderRadius = '50%'
-          el.style.background = colorScheme.bg
-          el.style.border = '4px solid white'
-          el.style.boxShadow = `0 6px 20px ${colorScheme.shadow}, 0 0 30px ${colorScheme.shadow}`
-          el.style.display = 'flex'
-          el.style.alignItems = 'center'
-          el.style.justifyContent = 'center'
-          el.style.fontSize = '28px'
-          el.style.cursor = 'pointer'
-          el.style.transition = 'transform 0.2s ease'
-          el.innerHTML = '👤'
-          // el.addEventListener('mouseenter', () => {
-          //   el.style.transform = 'scale(1.2)'
-          // })
-          // el.addEventListener('mouseleave', () => {
-          //   el.style.transform = 'scale(1)'
-          // })
+    // Detect mobile and limit pins for better performance
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const maxPins = isMobile ? 200 : 500 // Limit pins on mobile
+    const pinsToRender = personPins.slice(0, maxPins)
 
-        const marker = new mapboxgl.Marker({ 
-          element: el,
-          anchor: 'center'
-        })
-          .setLngLat(item.coordinates)
-          .addTo(map)
+    if (personPins.length > maxPins) {
+      console.warn(`⚠️ Limited pins to ${maxPins} for performance (${personPins.length} total available)`)
+    }
 
-        // Track if user is dragging to distinguish from click
-        let isDragging = false
-        let dragStartX = 0
-        let dragStartY = 0
+    // Create simple SVG pin markers for better mobile performance
+    pinsToRender.forEach((item, index) => {
+      // Color palette for pins
+      const colors = ['#FF1744', '#FFA000', '#7C3AED', '#4A90E2', '#00CC6A', '#E64A19']
+      const color = colors[index % colors.length]
+      
+      // Create lightweight SVG pin
+      const el = document.createElement('div')
+      el.className = 'person-pin'
+      el.style.width = '30px'
+      el.style.height = '40px'
+      el.style.cursor = 'pointer'
+      el.style.willChange = 'transform'
+      el.innerHTML = `
+        <svg width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 0C8.373 0 3 5.373 3 12c0 8.25 12 28 12 28s12-19.75 12-28c0-6.627-5.373-12-12-12z" 
+                fill="${color}" 
+                stroke="white" 
+                stroke-width="2"/>
+          <circle cx="15" cy="12" r="5" fill="white"/>
+          <text x="15" y="16" text-anchor="middle" font-size="8" fill="${color}">👤</text>
+        </svg>
+      `
 
-        el.addEventListener('mousedown', (e) => {
-          if (e.button === 0) {
-            dragStartX = e.clientX
-            dragStartY = e.clientY
-            isDragging = false
+      const marker = new mapboxgl.Marker({ 
+        element: el,
+        anchor: 'bottom'
+      })
+        .setLngLat(item.coordinates)
+        .addTo(map)
 
-            const onMouseMove = (moveEvent: MouseEvent) => {
-              const deltaX = Math.abs(moveEvent.clientX - dragStartX)
-              const deltaY = Math.abs(moveEvent.clientY - dragStartY)
-              if (deltaX > 3 || deltaY > 3) {
-                isDragging = true
-                // Temporarily disable pointer events to allow map drag
-                el.style.pointerEvents = 'none'
-              }
-            }
+      // Mobile-optimized touch handling
+      let touchStartTime = 0
+      let touchMoved = false
 
-            const onMouseUp = () => {
-              if (!isDragging) {
-                // It was a click, not a drag - show person modal
-                const { setSelectedPin } = useMapStore.getState()
-                setSelectedPin(item)
-              }
-              // Restore pointer events
-              el.style.pointerEvents = 'auto'
-              document.removeEventListener('mousemove', onMouseMove)
-              document.removeEventListener('mouseup', onMouseUp)
-            }
+      const handleTouchStart = () => {
+        touchStartTime = Date.now()
+        touchMoved = false
+      }
 
-            document.addEventListener('mousemove', onMouseMove)
-            document.addEventListener('mouseup', onMouseUp)
-          }
-        })
+      const handleTouchMove = () => {
+        touchMoved = true
+      }
 
-        // Allow wheel events to pass through for zooming
-        el.addEventListener('wheel', () => {
-          // Don't stop propagation - let map handle zoom
-        }, { passive: true })
+      const handleTouchEnd = () => {
+        const touchDuration = Date.now() - touchStartTime
+        // Only trigger if it's a quick tap (not a drag) and < 300ms
+        if (!touchMoved && touchDuration < 300) {
+          const { setSelectedPin } = useMapStore.getState()
+          setSelectedPin(item)
+        }
+      }
 
-        markersRef.current.push(marker)
+      const handleClick = (e: MouseEvent) => {
+        e.stopPropagation()
+        const { setSelectedPin } = useMapStore.getState()
+        setSelectedPin(item)
+      }
+
+      el.addEventListener('touchstart', handleTouchStart, { passive: true })
+      el.addEventListener('touchmove', handleTouchMove, { passive: true })
+      el.addEventListener('touchend', handleTouchEnd, { passive: true })
+      el.addEventListener('click', handleClick)
+
+      markersRef.current.push(marker)
     })
 
     return () => {

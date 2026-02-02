@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMemo } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 
 interface PersonPinModalProps {
   person: any
@@ -126,6 +126,26 @@ const getInterests = (person: any): string[] => {
 }
 
 export default function PersonPinModal({ person, onClose }: PersonPinModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  // Prevent scroll propagation to map
+  useEffect(() => {
+    const modalElement = modalRef.current
+    if (!modalElement) return
+
+    const preventPropagation = (e: Event) => {
+      e.stopPropagation()
+    }
+
+    modalElement.addEventListener('touchstart', preventPropagation, { passive: true })
+    modalElement.addEventListener('touchmove', preventPropagation, { passive: true })
+
+    return () => {
+      modalElement.removeEventListener('touchstart', preventPropagation)
+      modalElement.removeEventListener('touchmove', preventPropagation)
+    }
+  }, [])
+
   // Extract key information using correct field names
   const firstName = getFieldValue(person, 'FirstName', 'Voters_FirstName') || ''
   const lastName = getFieldValue(person, 'LastName', 'Voters_LastName') || ''
@@ -172,12 +192,18 @@ export default function PersonPinModal({ person, onClose }: PersonPinModalProps)
   return (
     <AnimatePresence>
       <motion.div
+        ref={modalRef}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[20px] shadow-2xl z-50 max-h-[70vh] overflow-y-auto"
-        style={{ borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}
+        style={{ 
+          borderTopLeftRadius: '20px', 
+          borderTopRightRadius: '20px',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
       >
         {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-2">

@@ -47,14 +47,17 @@ export default function MapPage() {
         }
         console.warn = warningFilter
 
+        // Detect mobile for performance optimizations
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/godmode7/cmkmlfs35000z01r15l1dghfz', // Use streets style
-            center: [-74.006, 40.7128], // Center of USA
-            zoom: 17, // Closer zoom for ground-level feel
-            pitch: 60, // Angled view (0 = top-down, 60 = angled/immersive)
-            bearing: -12, // Slight rotation for dynamic perspective
-            antialias: true,
+            style: 'mapbox://styles/godmode7/cmkmlfs35000z01r15l1dghfz',
+            center: [-74.006, 40.7128],
+            zoom: 17,
+            pitch: 60, // Same angled view on all devices
+            bearing: -12, // Same rotation on all devices
+            antialias: !isMobile, // Disable antialiasing on mobile for performance
         })
 
         mapRef.current = map // Store in local ref (prevents double init)
@@ -85,22 +88,20 @@ export default function MapPage() {
             {/* Map Container */}
             <div
                 ref={mapContainerRef}
-                className="absolute inset-0 transition-all duration-300"
+                className="absolute inset-0"
                 style={{ 
                     width: '100%', 
                     height: '100%',
-                    filter: isLoading ? 'blur(4px)' : 'none',
+                    touchAction: 'pan-x pan-y',
+                    WebkitTouchCallout: 'none',
                     pointerEvents: isLoading ? 'none' : 'auto'
                 }}
             />
             
-            {/* Loading overlay with blur effect */}
+            {/* Loading overlay - removed expensive blur effect */}
             {isLoading && mapInstance && (
                 <div 
-                    className="absolute inset-0 bg-white bg-opacity-30 z-40 transition-opacity duration-300"
-                    style={{ 
-                        backdropFilter: 'blur(4px)',
-                    }}
+                    className="absolute inset-0 bg-white bg-opacity-40 z-40 transition-opacity duration-300 pointer-events-none"
                 />
             )}
 
