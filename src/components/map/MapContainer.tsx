@@ -181,29 +181,27 @@ export default function MapContainer({ map }: MapContainerProps) {
       console.warn(`⚠️ Limited pins to ${maxPins} for performance (${personPins.length} total available)`)
     }
 
-    // Create simple SVG pin markers for better mobile performance
-    pinsToRender.forEach((item, index) => {
-      // Color palette for pins
-      const colors = ['#FF1744', '#FFA000', '#7C3AED', '#4A90E2', '#00CC6A', '#E64A19']
-      const color = colors[index % colors.length]
+    // Create person pin markers using gender-specific pin images
+    pinsToRender.forEach((item) => {
+      // Determine gender from person data
+      const gender = item.data.Gender || item.data.Voters_Gender || ''
+      const isMale = gender === 'M' || gender === 'Male'
+      const isFemale = gender === 'F' || gender === 'Female'
       
-      // Create lightweight SVG pin
-      const el = document.createElement('div')
+      // Select appropriate pin image based on gender
+      const pinImage = isMale ? '/icons/male_pin.png' : 
+                       isFemale ? '/icons/female_pin.png' : 
+                       '/icons/male_pin.png' // Default to male pin if gender unknown
+      
+      // Create lightweight image-based pin
+      const el = document.createElement('img')
+      el.src = pinImage
       el.className = 'person-pin'
-      el.style.width = '30px'
-      el.style.height = '40px'
+      el.style.width = '40px'
+      el.style.height = '50px'
       el.style.cursor = 'pointer'
       el.style.willChange = 'transform'
-      el.innerHTML = `
-        <svg width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 0C8.373 0 3 5.373 3 12c0 8.25 12 28 12 28s12-19.75 12-28c0-6.627-5.373-12-12-12z" 
-                fill="${color}" 
-                stroke="white" 
-                stroke-width="2"/>
-          <circle cx="15" cy="12" r="5" fill="white"/>
-          <text x="15" y="16" text-anchor="middle" font-size="8" fill="${color}">👤</text>
-        </svg>
-      `
+      el.style.objectFit = 'contain'
 
       const marker = new mapboxgl.Marker({ 
         element: el,
